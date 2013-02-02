@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<project name="JavaCard Build" basedir="../">
+	<description>ANT build file for JavaCard 2.2.2 Applets</description>
+	<target name="appletCompile">
+		<javac includeantruntime="false" srcdir="${dir.src}" destdir="${dir.build}" source="1.5" target="1.5" debug="true">
+			<bootclasspath>
+				<pathelement path="${env.java5}/jre/lib/rt.jar" />
+			</bootclasspath>
+			<classpath refid="jc-classpath" />
+			<compilerarg value="-g" />
+			<compilerarg value="-Xlint:unchecked" />
+		</javac>
+	</target>
+</project>
