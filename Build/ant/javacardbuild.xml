@@ -1,14 +1,21 @@
 <?xml version="1.0"?>
-<project name="JavaCard Build" basedir="../">
+<project name="JavaCardBuild">
 	<description>ANT build file for JavaCard 2.2.2 Applets</description>
-	<target name="appletCompile">
-		<javac includeantruntime="false" srcdir="${dir.src}" destdir="${dir.build}" source="1.5" target="1.5" debug="true">
-			<bootclasspath>
-				<pathelement path="${env.java5}/jre/lib/rt.jar" />
-			</bootclasspath>
-			<classpath refid="jc-classpath" />
-			<compilerarg value="-g" />
-			<compilerarg value="-Xlint:unchecked" />
-		</javac>
+	<property file="../../Build/ant/javacard.properties" />
+	<path id="converter-classpath">
+		<pathelement path="${env.javacard222.converter}" />
+		<pathelement path="${env.javacard222.offcardverifier}" />
+	</path>
+	<target name="convert">
+		<echoproperties></echoproperties>
+		<java classname="com.sun.javacard.converter.Converter" fork="true" failonerror="true">
+			<arg line="-classdir bin" />
+			<arg line="-verbose" />
+			<arg line="-exportpath ${env.javacard222}/api_export_files:${env.gp211}:${dir.build}" />
+			<arg line="-out CAP JCA EXP" />
+			<arg line="-applet ${applet.aid} ${applet.name}" />
+			<arg line="${applet.package} ${applet.package.aid} ${applet.version}" />
+			<classpath refid="converter-classpath" />
+		</java>
 	</target>
 </project>
