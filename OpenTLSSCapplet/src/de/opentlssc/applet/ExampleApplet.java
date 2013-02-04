@@ -7,7 +7,17 @@ import javacardx.apdu.ExtendedLength;
 
 public class ExampleApplet extends Applet implements ExtendedLength {
 
-	public void process(APDU arg0) throws ISOException {
+	/** 
+	 * While installing the cap file on the card this method instantiates the applet.
+	 * @param bArray
+	 * @param bOffset
+	 * @param bLength
+	 */
+	public static void install(byte[] bArray, short bOffset, byte bLength) {
+		new ExampleApplet();  
+	}	
+	
+	public void process(APDU apdu) throws ISOException {
 		// TODO Auto-generated method stub
 
 	}

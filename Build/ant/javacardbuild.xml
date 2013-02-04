@@ -1,19 +1,68 @@
 <?xml version="1.0"?>
 <project name="JavaCardBuild">
 	<description>ANT build file for JavaCard 2.2.2 Applets</description>
-	<property file="../../Build/ant/javacard.properties" />
+
+	<property file="../Build/ant/javacard.properties" />
+	
+	<taskdef resource="net/sf/antcontrib/antlib.xml">
+		<classpath>
+			<pathelement location="${env.antcontrib}" />
+		</classpath>
+	</taskdef>
+	
+	<if>
+		<length string="${applet.package.pix}" length="0" />
+		<then>
+			<property name="applet.package.aid" value="${applet.rid}" />
+		</then>
+		<else>
+			<property name="applet.package.aid" value="${applet.rid}:${applet.package.pix}" />
+		</else>
+	</if>
+	<if>
+		<length string="${applet.pix}" length="0" />
+		<then>
+			<property name="applet.aid" value="${applet.rid}" />
+		</then>
+		<else>
+			<property name="applet.aid" value="${applet.rid}:${applet.pix}" />
+		</else>
+	</if>
+	
+	
+	<property name="applet.package.aid" value="${applet.rid}:${applet.package.pix}" />
+	<property name="applet.aid" value="${applet.rid}:${applet.pix}" />
+
+	<propertyregex property="applet.aid.gp" input="${applet.aid}" regexp="0x|:" replace="" />
+	<propertyregex property="applet.package.aid.gp" input="${applet.package.aid}" regexp="0x|:" replace="" />
+	<propertyregex property="applet.aid.hex" input="${applet.aid}" regexp=":" replace=" " />
+	<propertyregex property="applet.package.aid.hex" input="${applet.package.aid}" regexp=":" replace=" " />
+	<propertyregex property="applet.package.last" input="${applet.package}" regexp="[^.]*\." replace="" />
+	<propertyregex property="applet.package.dir" input="${applet.package}" regexp="\." replace="\/" />
+
 	<path id="converter-classpath">
 		<pathelement path="${env.javacard222.converter}" />
 		<pathelement path="${env.javacard222.offcardverifier}" />
 	</path>
-	<target name="convert">
-		<echoproperties></echoproperties>
+	
+	<target name="convertApplet">
 		<java classname="com.sun.javacard.converter.Converter" fork="true" failonerror="true">
 			<arg line="-classdir bin" />
+			<arg line="-exportpath ${env.javacard222.apiexportfolder}" />
 			<arg line="-verbose" />
-			<arg line="-exportpath ${env.javacard222}/api_export_files:${env.gp211}:${dir.build}" />
 			<arg line="-out CAP JCA EXP" />
 			<arg line="-applet ${applet.aid} ${applet.name}" />
+			<arg line="${applet.package} ${applet.package.aid} ${applet.version}" />
+			<classpath refid="converter-classpath" />
+		</java>
+	</target>
+	
+	<target name="convertLibrary">
+		<java classname="com.sun.javacard.converter.Converter" fork="true" failonerror="true">
+			<arg line="-classdir bin" />
+			<arg line="-exportpath ${env.javacard222.apiexportfolder}" />
+			<arg line="-verbose" />
+			<arg line="-out CAP JCA EXP" />
 			<arg line="${applet.package} ${applet.package.aid} ${applet.version}" />
 			<classpath refid="converter-classpath" />
 		</java>

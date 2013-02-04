@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project name="OpenTLSSCapplet">
+<project name="OpenTLSSClibrary">
 	<property file="build.properties" />
 	<import file="../Build/ant/javacardbuild.xml"/>
 </project>
