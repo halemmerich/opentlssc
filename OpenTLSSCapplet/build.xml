@@ -1,5 +1,21 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project name="OpenTLSSCapplet">
 	<property file="build.properties" />
+	<import file="../Build/ant/init.xml"/>
 	<import file="../Build/ant/javacardbuild.xml"/>
+	<import file="../Build/ant/jcwde.xml"/>
+	<import file="../Build/ant/card.xml"/>
+
+	<target name="cardCompleteInstall" description="">
+		<ant antfile="build.xml" dir="../OpenTLSSClib/" target="convert" inheritAll="false" />
+		<ant antfile="build.xml" dir="." target="convert" inheritAll="false" />
+		<ant antfile="build.xml" dir="." target="cardDelete" inheritAll="false" />
+		<ant antfile="build.xml" dir="../OpenTLSSClib/" target="cardDelete" inheritAll="false" />
+		<ant antfile="build.xml" dir="../OpenTLSSClib/" target="cardInstall" inheritAll="false" />
+		<ant antfile="build.xml" dir="." target="cardInstall" inheritAll="false" />
+	</target>
+	<target name="cardCompleteDelete" description="">
+		<ant antfile="build.xml" dir="." target="cardDelete" inheritAll="false" />
+		<ant antfile="build.xml" dir="../OpenTLSSClib/" target="cardDelete" inheritAll="false" />
+	</target>
 </project>

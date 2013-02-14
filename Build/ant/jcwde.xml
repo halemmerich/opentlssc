@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<project name="JCWDE">
+	<description>ANT script file for JavaCard 2.2.2 JCWDE use</description>
+
+	<path id="jcwde-classpath">
+		<pathelement location="${env.javacard222.jcwde}" />
+		<pathelement location="${env.javacard222.api}" />
+		<pathelement location="${env.javacard222.apduio}" />
+		<pathelement location="${env.javacard222.installer}" />
+		<pathelement location="bin" />
+	</path>
+	
+	<target name="createJcwdeConfig">
+		<echo file="jcwde.config">${jcwde.installer.applet}${line.separator}</echo>
+		<echo file="jcwde.config" append="true">${code.package}.${code.classname} ${code.aid}</echo>
+	</target>
+	
+	<target name="jcwdeStart" depends="createJcwdeConfig" description="Start the JCWDE with debugging">
+		<java classname="com.sun.javacard.jcwde.Main" fork="true" failonerror="true">
+			<arg line="-verbose" />
+			<arg line="jcwde.config" />
+			<jvmarg line="-agentlib:jdwp=transport=dt_socket,server=y,address=${config.jcwde.port},suspend=n" />
+			<classpath refid="jcwde-classpath"/>
+		</java>
+	</target>
+	
+</project>

@@ -1,0 +1,43 @@
+<?xml version="1.0"?>
+<project name="Initialize">
+	<property file="../Build/ant/javacard.properties" />
+	
+	<taskdef resource="net/sf/antcontrib/antlib.xml">
+		<classpath>
+			<pathelement location="${env.antcontrib}" />
+		</classpath>
+	</taskdef>
+	
+	<if>
+		<length string="${applet.package.pix}" length="0" />
+		<then>
+			<property name="applet.package.aid" value="${applet.rid}" />
+		</then>
+		<else>
+			<property name="applet.package.aid" value="${applet.rid}:${applet.package.pix}" />
+		</else>
+	</if>
+	<if>
+		<length string="${applet.pix}" length="0" />
+		<then>
+			<property name="applet.aid" value="${applet.rid}" />
+		</then>
+		<else>
+			<property name="applet.aid" value="${applet.rid}:${applet.pix}" />
+		</else>
+	</if>
+	
+	
+	<property name="code.package.aid" value="${code.rid}:${code.package.pix}" />
+	<property name="code.aid" value="${code.rid}:${code.pix}" />
+
+	<propertyregex property="code.aid.gp" input="${code.aid}" regexp="0x|:" replace="" />
+	<propertyregex property="code.package.aid.gp" input="${code.package.aid}" regexp="0x|:" replace="" />
+	<propertyregex property="code.aid.hex" input="${code.aid}" regexp=":" replace=" " />
+	<propertyregex property="code.package.aid.hex" input="${code.package.aid}" regexp=":" replace=" " />
+	<propertyregex property="code.package.last" input="${code.package}" regexp="[^.]*\." replace="" />
+	<propertyregex property="code.package.dir" input="${code.package}" regexp="\." replace="\/" />
+
+	<property name="code.capfile" value="bin/${code.package.dir}/javacard/${code.package.last}.cap" />
+	
+</project>
