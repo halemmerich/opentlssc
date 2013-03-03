@@ -17,8 +17,85 @@
 
 package de.opentlssc.tls;
 
+import javacard.framework.ISO7816;
+import javacard.framework.ISOException;
+
 public class TLS {
-	public byte test(){
-		return 5;
+
+	private short cipherSuite;
+	private boolean cipherSuiteSet = false;
+	
+	public void setCipherSuite(short cipherSuite){
+		if (isCipherSuiteValid(cipherSuite)){
+			this.cipherSuite = cipherSuite;
+			cipherSuiteSet = true;
+		} else {
+			cipherSuiteSet = false;
+			ISOException.throwIt(ISO7816.SW_DATA_INVALID);
+		}
+	}
+	
+	private boolean isCipherSuiteValid(short cipherSuite) {
+		// TODO Auto-generated method stub
+		return true;
+	}
+
+	public void initializeTls(){
+		
+	}
+	
+	public boolean isInitializationComplete(){
+		return checkConfiguration();
+	}
+	
+	private boolean checkConfiguration() {
+		return cipherSuiteSet;
+	}
+
+	public boolean anotherHandshakeMessageNeeded(){
+		return checkIfAnotherMessageIsNeeded();
+	}
+	
+	/**
+	 * 
+	 * @param incomingRecordData
+	 * @param incomingRecordDataOffset
+	 * @param incomingRecordDataLength
+	 * @param outgoingRecordData
+	 * @param outgoingRecordDataOffset
+	 * @return The expected length of the next record to be sent (worst case estimation)
+	 */
+	public short doHandshake(byte [] incomingRecordData, short incomingRecordDataOffset, short incomingRecordDataLength, byte [] outgoingRecordData, short outgoingRecordDataOffset){
+		return calculateWorstCaseLengthOfNextRecord();
+	}
+	
+	private short calculateWorstCaseLengthOfNextRecord() {
+		// TODO Auto-generated method stub
+		return 0;
+	}
+
+	public short readRecord(byte [] recordData, short offset, short length, byte [] payloadDestination, short payloadDestinationOffset){
+		//FIXME
+		if (!isConnectionSecure()){
+			ISOException.throwIt(ISO7816.SW_CONDITIONS_NOT_SATISFIED);
+		}
+		return 0;
+	}
+	
+	private boolean isConnectionSecure() {
+		// TODO Auto-generated method stub
+		return false;
+	}
+
+	public short writeRecord(byte [] payloadData, short offset, short length, byte [] recordData, short recordDataOffset){
+		if (!isConnectionSecure()){
+			ISOException.throwIt(ISO7816.SW_CONDITIONS_NOT_SATISFIED);
+		}
+		return 0;
+	}
+	
+	private boolean checkIfAnotherMessageIsNeeded() {
+		// TODO Auto-generated method stub
+		return false;
 	}
 }

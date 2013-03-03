@@ -19,13 +19,19 @@ package de.opentlssc.applet;
 
 import javacard.framework.APDU;
 import javacard.framework.Applet;
+import javacard.framework.ISO7816;
 import javacard.framework.ISOException;
 import javacardx.apdu.ExtendedLength;
 import de.opentlssc.tls.TLS;
 
 public class ExampleApplet extends Applet implements ExtendedLength {
 
+	TLS tls;
+	byte [] workspace;
+	
 	public ExampleApplet() {
+		tls = new TLS();
+		workspace = new byte [2000];
 		// all initializations must take place before the call to register(), if this hint
 		// is not followed, exceptions thrown while installing might be lost unnoticed.
 		register();
@@ -41,10 +47,29 @@ public class ExampleApplet extends Applet implements ExtendedLength {
 		new ExampleApplet();  
 	}	
 	
+	public static final byte INS_TLS_RECORD = 0;
+	
 	public void process(APDU apdu) throws ISOException {
-		TLS tls = new TLS();
-		byte test = tls.test();
-		test += 1;
-		ISOException.throwIt(test);
+		ISOException.throwIt((short) 0);
+		byte [] buffer = apdu.getBuffer();
+		short incomingLength = (short) (apdu.setIncomingAndReceive() - apdu.getOffsetCdata());
+		if (buffer[ISO7816.OFFSET_INS] == INS_TLS_RECORD){
+			short responseApduDataLength = 0;
+			
+			if (!tls.isInitializationComplete()){
+				tls.initializeTls();
+			}
+			if (tls.anotherHandshakeMessageNeeded()){
+				responseApduDataLength = tls.doHandshake(apdu.getBuffer(), apdu.getOffsetCdata(), incomingLength, buffer, (short) 0);
+			} else {
+				if (incomingLength > apdu.getOffsetCdata()){
+					tls.readRecord(buffer, apdu.getOffsetCdata(), incomingLength, workspace, (short) 0);
+				}
+				responseApduDataLength = tls.writeRecord(workspace, (short) 0, (short) 16, buffer, (short) 0);
+			}
+			if (responseApduDataLength > 0){
+				apdu.setOutgoingAndSend((short)0 , responseApduDataLength);
+			}
+		}
 	}
 }
