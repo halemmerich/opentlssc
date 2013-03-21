@@ -25,12 +25,7 @@ package de.opentlssc.tls;
  *
  */
 class ASN1Tools extends StaticTool{
-
-	static short			lastNumberOfIdentifierOctets;
-	static short			lastNumberOfLengthOctets;
-	static short			lastNumberOfAdditionalNonContentOctets;
-	static short			lastHeaderLength;
-
+	
 	/**
 	 * Get length including length of identifier and length octets
 	 * <p>
@@ -42,32 +37,20 @@ class ASN1Tools extends StaticTool{
 	 * @return
 	 */
 	static short getLengthOfStructure(byte[] buffer, short offset) {
-
-		//byte cla = (byte) (buffer[offset] >>> 6);
-		short length = 0;
-		parseIdentifierOctets(buffer, offset);
-		length += lastNumberOfIdentifierOctets;
-		// check class
-		// if (cla == CLASS_UNIVERSAL) {
-		length += parseLengthOctets(buffer, (short) (offset + length));
-		length += lastNumberOfLengthOctets;
-		// }
-		length += lastNumberOfAdditionalNonContentOctets;
+		short length = getNumberOfIdentifierOctets(buffer, offset);
+		short tag = parseIdentifierOctets(buffer, offset, length);
+		short numberOfLengthOctets= getNumberOfLengthOctets(buffer, (short) (offset + length));
+		length += parseLengthOctets(buffer, (short) (offset + length), numberOfLengthOctets);
+		length += numberOfLengthOctets;
+		length += getNumberOfAdditionalNonContentOctets(tag);
 		return length;
 	}
-
-
-	/**
-	 * Parse the structure at the given offset and return its length.
-	 * 
-	 * @param data
-	 * @param offset
-	 * @return
-	 */
-	static short jumpOver(byte[] data, short offset) {
-		return getLengthOfStructure(data, offset);
+	
+	static short getContentLength(byte [] buffer, short offset){
+		offset += getNumberOfIdentifierOctets(buffer, offset);
+		short numberOfLengthOctets= getNumberOfLengthOctets(buffer, offset);
+		return parseLengthOctets(buffer, offset, numberOfLengthOctets);
 	}
-
 	
 	/**
 	 * Parse the structure at the given offset and return the offset to its content.
@@ -80,9 +63,60 @@ class ASN1Tools extends StaticTool{
 		// if (!checkSingleBit(data[offset], (short) 5)) {
 		// CardRuntimeException.throwIt(Exceptions.ASN1_JUMP_INTO_PRIMITIVE);
 		// }
-		getLengthOfStructure(data, offset);
-		return (short) (lastNumberOfIdentifierOctets + lastNumberOfLengthOctets + lastNumberOfAdditionalNonContentOctets);
+		short numberOfIdentifierOctets = getNumberOfIdentifierOctets(data, offset);
+		short tag = parseIdentifierOctets(data, offset, numberOfIdentifierOctets);
+		offset += numberOfIdentifierOctets;
+		offset += getNumberOfLengthOctets(data, offset);
+		return offset += getNumberOfAdditionalNonContentOctets(tag);
 	}
+	
+	static short getNumberOfIdentifierOctets(byte [] data, short offset){
+		short tag = (short) (data[offset] & 0x1F);
+		
+		//mask the last 5 bits
+		short numberOfIdentifierOctets = 1;
+		//if identifier octet is 00011111 read further octets
+		if (tag == 0x1F) {
+			while (checkSingleBit(data[(short) (offset + numberOfIdentifierOctets - 1)], (short) 7)) {
+				numberOfIdentifierOctets++;
+			}
+		}
+		return numberOfIdentifierOctets;
+	}
+	
+	static short getNumberOfAdditionalNonContentOctets(short tag){
+		switch (tag){
+		case 3:
+			//BITSTRING, contains 1 byte information about used bits in last octet
+			return 1;
+		default:
+			return 0;
+		} 
+	}
+	
+	static short getNumberOfLengthOctets(byte [] data, short offset){
+		// if bit 7 set long form
+		// if not short form
+		short numberOfLengthOctets = 1;
+		if (checkSingleBit(data[offset], (short) 7)) {
+			numberOfLengthOctets += (short) ((data[(short) (offset)] & 0x7F));
+		}
+		return numberOfLengthOctets;
+	}
+	
+	/**
+	 * Parse the structure at the given offset and return its length.
+	 * 
+	 * @param data
+	 * @param offset
+	 * @return
+	 */
+	static short jumpOver(byte[] data, short offset) {
+		return (short) (offset + getLengthOfStructure(data, offset));
+	}
+
+	
+
 
 	/**
 	 * Parses ASN.1 length octets
@@ -92,24 +126,22 @@ class ASN1Tools extends StaticTool{
 	 *            to the first length octet
 	 * @return length value as short
 	 */
-	static short parseLengthOctets(byte[] data, short offset) {
-
-		short result = 0;
+	static short parseLengthOctets(byte[] data, short offset, short numberOfLengthOctets) {
 		// if bit 7 set long form
 		// if not short form
-		if (checkSingleBit(data[offset], (short) 7)) {
-			lastNumberOfLengthOctets = (short) ((data[(short) (offset)] & 0x7F) + 1);
-			for (short i = 1; i < lastNumberOfLengthOctets; i++) {
-				result |= data[(short) (offset + i)] & 0xFF;
-				if (i < (short) (lastNumberOfLengthOctets - 1)) {
-					result <<= 8;
+		short length = 0;
+		if (numberOfLengthOctets > 1) {
+			length = (short) ((data[(short) (offset)] & 0x7F) + 1);
+			for (short i = 1; i < numberOfLengthOctets; i++) {
+				length |= data[(short) (offset + i)] & 0xFF;
+				if (i < (short) (numberOfLengthOctets - 1)) {
+					length <<= 8;
 				}
 			}
 		} else {
-			result = data[offset];
-			lastNumberOfLengthOctets = 1;
+			length = data[offset];
 		}
-		return result;
+		return length;
 	}
 
 	/**
@@ -120,27 +152,18 @@ class ASN1Tools extends StaticTool{
 	 *            to the first identifier octet
 	 * @return tag number
 	 */
-	static short parseIdentifierOctets(byte[] data, short offset) {
-		//mask the last 5 bits
-		short result = (short) (data[offset] & 0x1F);
-		lastNumberOfIdentifierOctets = 1;
-		//if identifier octet is 00011111 read further octets
-		if (result == 0x1F) {
-			result = 0;
-			while (checkSingleBit(data[(short) (offset + result)], (short) 7)) {
-				result |= data[(short) (offset + lastNumberOfIdentifierOctets - 1)] & 0xFF;
-				lastNumberOfIdentifierOctets++;
+	static short parseIdentifierOctets(byte[] data, short offset, short numberOfIdentifierOctets) {
+		
+		short tag = 0;
+		if (numberOfIdentifierOctets > 1) {
+			tag = 0;
+			for (short i = 1; i < numberOfIdentifierOctets; i++){
+				tag |= data[(short) (offset + i)] & 0x7F;
 			}
+		} else {
+			tag = (short) (data[offset] & 0x1F);
 		}
-		switch (result){
-		case 3:
-			//BITSTRING, contains 1 byte information about used bits in last octet
-			lastNumberOfAdditionalNonContentOctets = 1;
-			break;
-		default:
-			lastNumberOfAdditionalNonContentOctets = 0;
-		}
-		return result;
+		return tag;
 	}
 
 	/**

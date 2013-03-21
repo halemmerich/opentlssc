@@ -59,6 +59,10 @@ class TlsTools extends StaticTool {
 	private static Crypto_HMAC hmacSha;
 	private static Crypto_HMAC hmacMd5;
 	private static Crypto_HMAC hmacSha256;
+
+	private static RSAPublicKey				serverPublicKey512;
+	private static RSAPublicKey				serverPublicKey1024;
+	private static RSAPublicKey				serverPublicKey2048;
 	
 	// exchange
 	private static Cipher rsa;
@@ -127,6 +131,12 @@ class TlsTools extends StaticTool {
 			securityParameters[i] = new TlsSecurityParameters();
 		}
 
+		serverPublicKey512 = (RSAPublicKey) KeyBuilder.buildKey(KeyBuilder.TYPE_RSA_PUBLIC, KeyBuilder.LENGTH_RSA_512, false);
+		if (!LibraryConfiguration.emu){
+			serverPublicKey1024 = (RSAPublicKey) KeyBuilder.buildKey(KeyBuilder.TYPE_RSA_PUBLIC, KeyBuilder.LENGTH_RSA_1024, false);
+			serverPublicKey2048 = (RSAPublicKey) KeyBuilder.buildKey(KeyBuilder.TYPE_RSA_PUBLIC, KeyBuilder.LENGTH_RSA_2048, false);
+		}
+		
 		reset();
 	}
 
@@ -207,12 +217,12 @@ class TlsTools extends StaticTool {
 		return length;
 	}
 
-	static void createPublicKeyFromCertificate() {
-		serverPublicKey = CryptoTools.parse(Data.serverCertificate.data,
-				CryptoTools.findPublicKeyOffset(Data.serverCertificate.data,
-						Data.serverCertificate.offset));
+	static void createPublicKeyFromCertificate(byte [] certificateData, short certificateDataOffset) {
+		serverPublicKey = CryptoTools.parse(certificateData,
+				CryptoTools.findPublicKeyOffset(certificateData,
+						certificateDataOffset));
 	}
-
+	
 	/**
 	 * Set and activate the connection state that is depicted as the current
 	 * state.
@@ -398,5 +408,19 @@ class TlsTools extends StaticTool {
 
 	public static void copyMasterSecretToNextSecurityParameters() {
 		securityParameters[currentClientSecurityParametersPointer].masterSecret.copy(getNextClientSecurityParameters().masterSecret.data, getCurrentClientSecurityParameters().masterSecret.offset);
+	}
+
+	
+	static RSAPublicKey getPublicKeyForSize(short size){
+		switch(size){
+			case KeyBuilder.LENGTH_RSA_512:
+				return serverPublicKey512;
+			case KeyBuilder.LENGTH_RSA_1024:
+				return serverPublicKey1024;
+			case KeyBuilder.LENGTH_RSA_2048:
+				return serverPublicKey2048;
+			default:
+				return null;
+		}
 	}
 }

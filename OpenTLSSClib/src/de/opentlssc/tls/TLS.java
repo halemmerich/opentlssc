@@ -20,6 +20,7 @@ package de.opentlssc.tls;
 import javacard.framework.ISO7816;
 import javacard.framework.ISOException;
 import javacard.framework.Util;
+import javacard.security.MessageDigest;
 import javacardx.crypto.Cipher;
 
 public class TLS {
@@ -29,6 +30,11 @@ public class TLS {
 	
 	public TLS(){
 
+		try {
+			MessageDigest.getInstance(MessageDigest.ALG_MD5, false);
+		} catch (Exception e){
+			LibraryConfiguration.emu = true;
+		}
 		Constants.init();
 		Data.init();
 		CryptoTools.init();

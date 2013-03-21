@@ -79,8 +79,7 @@ class RecordTools{
 				+ Constants.OFFSET_TLS_CERTIFICATE_LENGTH_IN_RECORD + 1));
 		offset += Constants.OFFSET_TLS_CERTIFICATE_DATA_IN_RECORD;
 		length -= Constants.OFFSET_TLS_CERTIFICATE_DATA_IN_RECORD;
-		Data.serverCertificate.set(buffer, offset, (short) 0, length);
-		TlsTools.createPublicKeyFromCertificate();
+		TlsTools.createPublicKeyFromCertificate(buffer, offset);
 	}
 	
 	static void parseApplicationData(byte [] recordData, short recordDataOffset, short recordDataLength, byte [] destination, short destinationOffset){

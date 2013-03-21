@@ -17,8 +17,6 @@
 
 package de.opentlssc.tls;
 
-import javacard.security.KeyBuilder;
-import javacard.security.MessageDigest;
 import javacard.security.RSAPublicKey;
 import javacard.security.RandomData;
 
@@ -32,29 +30,13 @@ class CryptoTools extends StaticTool {
 
 	static RandomData				random;
 	private static byte [] randomNumberWorkspace;
-
-	static RSAPublicKey				serverPublicKey512;
-	static RSAPublicKey				serverPublicKey1024;
-	static RSAPublicKey				serverPublicKey2048;
 	
 	static void init(){
-		try {
-			MessageDigest.getInstance(MessageDigest.ALG_MD5, false);
-		} catch (Exception e){
-			LibraryConfiguration.emu = true;
-		}
 		
 		if (LibraryConfiguration.emu) {
 			random = RandomData.getInstance(RandomData.ALG_PSEUDO_RANDOM);
 		} else {
 			random = RandomData.getInstance(RandomData.ALG_SECURE_RANDOM);
-		}
-		randomNumberWorkspace = new byte [1];
-
-		serverPublicKey512 = (RSAPublicKey) KeyBuilder.buildKey(KeyBuilder.TYPE_RSA_PUBLIC, KeyBuilder.LENGTH_RSA_512, false);
-		if (!LibraryConfiguration.emu){
-			serverPublicKey1024 = (RSAPublicKey) KeyBuilder.buildKey(KeyBuilder.TYPE_RSA_PUBLIC, KeyBuilder.LENGTH_RSA_1024, false);
-			serverPublicKey2048 = (RSAPublicKey) KeyBuilder.buildKey(KeyBuilder.TYPE_RSA_PUBLIC, KeyBuilder.LENGTH_RSA_2048, false);
 		}
 	}
 	
@@ -87,27 +69,27 @@ class CryptoTools extends StaticTool {
 	 */
 	static short findPublicKeyOffset(byte [] certificate, short offset) {
 		// certificate
-		offset += ASN1Tools.jumpInto(certificate, offset);
+		offset = ASN1Tools.jumpInto(certificate, offset);
 		// signed certificate
-		offset += ASN1Tools.jumpInto(certificate, offset);
+		offset = ASN1Tools.jumpInto(certificate, offset);
 		// version
-		offset += ASN1Tools.jumpOver(certificate, offset);
+		offset = ASN1Tools.jumpOver(certificate, offset);
 		// serialnumber
-		offset += ASN1Tools.jumpOver(certificate, offset);
+		offset = ASN1Tools.jumpOver(certificate, offset);
 		// signature
-		offset += ASN1Tools.jumpOver(certificate, offset);
+		offset = ASN1Tools.jumpOver(certificate, offset);
 		// issuer
-		offset += ASN1Tools.jumpOver(certificate, offset);
+		offset = ASN1Tools.jumpOver(certificate, offset);
 		// validity
-		offset += ASN1Tools.jumpOver(certificate, offset);
+		offset = ASN1Tools.jumpOver(certificate, offset);
 		// subject
-		offset += ASN1Tools.jumpOver(certificate, offset);
+		offset = ASN1Tools.jumpOver(certificate, offset);
 		// subjectpublickeyinfo
-		offset += ASN1Tools.jumpInto(certificate, offset);
+		offset = ASN1Tools.jumpInto(certificate, offset);
 		// algorithm
-		offset += ASN1Tools.jumpOver(certificate, offset);
+		offset = ASN1Tools.jumpOver(certificate, offset);
 		// subjectPublicKey
-		offset += ASN1Tools.jumpInto(certificate, offset);
+		offset = ASN1Tools.jumpInto(certificate, offset);
 		return offset;
 	}
 	
@@ -120,15 +102,12 @@ class CryptoTools extends StaticTool {
 	 */
 	
 	static RSAPublicKey parse(byte [] publicKey, short offset){
+
+		short offsetModulusStructure = ASN1Tools.jumpInto(publicKey, offset);		
+		short offsetEponentStructure = ASN1Tools.jumpOver(publicKey, offsetModulusStructure);
 		
-		// jump over header
-		ASN1Tools.getLengthOfStructure(publicKey, offset);
-		offset += ASN1Tools.lastNumberOfIdentifierOctets + ASN1Tools.lastNumberOfLengthOctets;
-		
-		
-		short modLength = (short) (ASN1Tools.getLengthOfStructure(publicKey, offset) - ASN1Tools.lastNumberOfIdentifierOctets - ASN1Tools.lastNumberOfLengthOctets);
-		short modOffset = (short) (offset + ASN1Tools.lastNumberOfIdentifierOctets + ASN1Tools.lastNumberOfLengthOctets);
-		offset += modLength + ASN1Tools.lastNumberOfIdentifierOctets + ASN1Tools.lastNumberOfLengthOctets;
+		short modOffset = ASN1Tools.jumpInto(publicKey, offsetModulusStructure);
+		short modLength = ASN1Tools.getContentLength(publicKey, offsetModulusStructure);
 
 		// sometimes keys have an additional 0x00 in front to prevent
 		// misinterpretation as negative number, for use in javacard this needs to be stripped
@@ -137,29 +116,16 @@ class CryptoTools extends StaticTool {
 			modLength--;
 		}
 		
-		short expLength = (short) (ASN1Tools.getLengthOfStructure(publicKey, offset) - ASN1Tools.lastNumberOfIdentifierOctets - ASN1Tools.lastNumberOfLengthOctets);
-		short expOffset = (short) (offset + ASN1Tools.lastNumberOfIdentifierOctets + ASN1Tools.lastNumberOfLengthOctets);
+		short expLength = ASN1Tools.getContentLength(publicKey, offsetEponentStructure);
+		short expOffset = ASN1Tools.jumpInto(publicKey, offsetEponentStructure);
 
 		
 		
 		
 		//TODO intelligent solution for key management
-		RSAPublicKey key = getPublicKeyForSize((short) (modLength * 8));
+		RSAPublicKey key = TlsTools.getPublicKeyForSize((short) (modLength * 8));
 		key.setModulus(publicKey, modOffset, modLength);
 		key.setExponent(publicKey, expOffset, expLength);
 		return key;
-	}
-	
-	static RSAPublicKey getPublicKeyForSize(short size){
-		switch(size){
-			case KeyBuilder.LENGTH_RSA_512:
-				return serverPublicKey512;
-			case KeyBuilder.LENGTH_RSA_1024:
-				return serverPublicKey1024;
-			case KeyBuilder.LENGTH_RSA_2048:
-				return serverPublicKey2048;
-			default:
-				return null;
-		}
 	}
 }
