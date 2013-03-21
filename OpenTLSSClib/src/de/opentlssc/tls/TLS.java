@@ -56,6 +56,7 @@ public class TLS {
 	public short doHandshake(byte [] incomingRecordData, short incomingRecordDataOffset, short incomingRecordDataLength, byte [] outgoingRecordData, short outgoingRecordDataOffset){
 		short initalOutgoingOffset = outgoingRecordDataOffset;
 		if (incomingRecordDataLength > 0 && transmissionState == Constants.STATE_TRANSMISSION_RECEIVE && tlsState == Constants.STATE_APPLET_HANDSHAKE){
+			RecordTools.checkRecord(incomingRecordData, incomingRecordDataOffset, incomingRecordDataLength);
 			TlsTools.activateCurrentServerSecurityParameters();
 			switch (handshakeState) {
 			case Constants.STATE_HANDSHAKE_HELLO:
@@ -85,7 +86,7 @@ public class TLS {
 			case Constants.STATE_HANDSHAKE_CHANGE_CIPHER_SPEC:
 				TlsTools.serverHashActive = false;
 				incomingRecordDataLength = unwrapRecordData(incomingRecordData, incomingRecordDataOffset, incomingRecordDataLength);
-				RecordTools.parseChangeCipherSpec(incomingRecordData, incomingRecordDataOffset);
+				RecordTools.parseChangeCipherSpec(incomingRecordData, incomingRecordDataOffset, incomingRecordDataLength);
 				TlsTools.makeNextSecurityParametersCurrentForServer();
 				handshakeState = Constants.STATE_HANDSHAKE_FINISHED;
 				break;
@@ -185,7 +186,7 @@ public class TLS {
 			boolean macIsCorrect = 0==Util.arrayCompare(dataToCheck, (short) (dataToCheckOffset + dataToCheckLength), expectedMac, (short)0, TlsTools.payloadMac.getLength());
 			TransientTools.freeWorkspace(expectedMac);
 			if (!macIsCorrect){
-			//	ISOException.throwIt(ISO7816.SW_DATA_INVALID);
+				ISOException.throwIt(ISO7816.SW_DATA_INVALID);
 			}
 			return (short) (dataToCheckLength + Constants.LENGTH_TLS_RECORD_HEADER);
 		}
@@ -205,7 +206,7 @@ public class TLS {
 			short incomingRecordDataOffset, short incomingRecordDataLength) {
 		incomingRecordDataLength = decryptRecordPayload(incomingRecordData, incomingRecordDataOffset, incomingRecordDataLength);
 		incomingRecordDataLength = checkMac(incomingRecordData, incomingRecordDataOffset, incomingRecordDataLength);
-		resetRecordHeaderLength(incomingRecordData, incomingRecordDataOffset, incomingRecordDataLength);
+		resetRecordHeaderLength(incomingRecordData, incomingRecordDataOffset, (short) (incomingRecordDataLength - Constants.LENGTH_TLS_RECORD_HEADER));
 		TlsTools.sendSequenceCounter.value++;
 		return incomingRecordDataLength;
 	}

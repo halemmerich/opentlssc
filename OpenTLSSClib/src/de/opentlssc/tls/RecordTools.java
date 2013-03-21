@@ -17,18 +17,18 @@
 
 package de.opentlssc.tls;
 
+import javacard.framework.ISO7816;
+import javacard.framework.ISOException;
 import javacard.framework.Util;
 
 class RecordTools{
 
 	static void parseAlert(byte[] buffer, short offset, short length) {
-		checkRecord(buffer, offset);
-		checkHandshake(buffer, offset);
+		checkHandshake(buffer, offset, length);
 	}
 
 	static void parseFinished(byte[] buffer, short offset, short length) {
-		checkRecord(buffer, offset);
-		checkHandshake(buffer, offset);
+		checkHandshake(buffer, offset, length);
 		TlsTools.handshakeHashUpdate(buffer, (short) (offset + Constants.LENGTH_TLS_RECORD_HEADER), (short) (length - Constants.LENGTH_TLS_RECORD_HEADER));
 		checkFinishedValue(buffer, offset);
 	}
@@ -40,18 +40,18 @@ class RecordTools{
 	}
 
 	static void parseServerHelloDone(byte[] buffer, short offset, short length) {
-		checkRecord(buffer, offset);
-		checkHandshake(buffer, offset);
+		checkHandshake(buffer, offset, length);
 		TlsTools.handshakeHashUpdate(buffer, (short) (offset + Constants.LENGTH_TLS_RECORD_HEADER), (short) (length - Constants.LENGTH_TLS_RECORD_HEADER));
 	}
 
-	static void parseChangeCipherSpec(byte[] buffer, short offset) {
-		checkRecord(buffer, offset);
+	static void parseChangeCipherSpec(byte[] buffer, short offset, short length) {
+		if (buffer[offset + Constants.LENGTH_TLS_RECORD_HEADER] != 1){
+			ISOException.throwIt(ISO7816.SW_DATA_INVALID);
+		}
 	}
 	
 	static void parseServerHello(byte[] buffer, short offset, short length){
-		checkRecord(buffer, offset);
-		checkHandshake(buffer, offset);
+		checkHandshake(buffer, offset, length);
 		TlsTools.handshakeHashUpdate(buffer, (short) (offset + Constants.LENGTH_TLS_RECORD_HEADER), (short) (length - Constants.LENGTH_TLS_RECORD_HEADER));
 		offset += Constants.LENGTH_TLS_RECORD_HEADER + Constants.LENGTH_TLS_HANDSHAKE_HEADER + 2;
 		TlsTools.getNextClientSecurityParameters().serverRandomBytes.set(buffer, offset);
@@ -70,8 +70,7 @@ class RecordTools{
 	}
 
 	static void parseCertificate(byte[] buffer, short offset, short length) {
-		checkRecord(buffer, offset);
-		checkHandshake(buffer, offset);
+		checkHandshake(buffer, offset, length);
 		TlsTools.handshakeHashUpdate(buffer, (short) (offset + Constants.LENGTH_TLS_RECORD_HEADER), (short) (length - Constants.LENGTH_TLS_RECORD_HEADER));
 		
 		// get length of first certificate
@@ -83,7 +82,6 @@ class RecordTools{
 	}
 	
 	static void parseApplicationData(byte [] recordData, short recordDataOffset, short recordDataLength, byte [] destination, short destinationOffset){
-		checkRecord(recordData, recordDataOffset);
 		Util.arrayCopyNonAtomic(recordData, (short) (recordDataOffset + Constants.LENGTH_TLS_RECORD_HEADER), destination, destinationOffset, (short) (recordDataLength + Constants.LENGTH_TLS_RECORD_HEADER));
 	}
 	
@@ -225,15 +223,19 @@ class RecordTools{
 	}
 	
 	static void writeHandshakeHeaderLength(short handshakeContentLength, byte [] recordData, short recordDataOffset){
-		recordDataOffset += Constants.LENGTH_TLS_RECORD_HEADER + Constants.OFFSET_TLS_HANDSHAKE_LENGTH_IN_RECORD + 1;
+		recordDataOffset += Constants.LENGTH_TLS_RECORD_HEADER + Constants.OFFSET_TLS_HANDSHAKE_LENGTH_IN_RECORD_CONTENT + 1;
 		recordDataOffset = Util.setShort(recordData, recordDataOffset, handshakeContentLength);
 	}
 
-	static void checkRecord(byte [] recordData, short recordDataOffset){
-		//TODO implement
+	static void checkRecord(byte [] recordData, short recordDataOffset, short recordDataLength){
+		if (Util.getShort(recordData, (short) (recordDataOffset + Constants.OFFSET_TLS_RECORD_LENGTH)) != recordDataLength - Constants.LENGTH_TLS_RECORD_HEADER){
+			ISOException.throwIt(ISO7816.SW_DATA_INVALID);
+		}
 	}
 
-	static void checkHandshake(byte [] recordData, short recordDataOffset){
-		//TODO implement
+	static void checkHandshake(byte [] recordData, short recordDataOffset, short recordDataLength){
+		if (Util.getShort(recordData, (short) (recordDataOffset + Constants.LENGTH_TLS_RECORD_HEADER + Constants.OFFSET_TLS_HANDSHAKE_LENGTH_IN_RECORD_CONTENT + 1)) != recordDataLength - Constants.LENGTH_TLS_RECORD_HEADER - Constants.LENGTH_TLS_HANDSHAKE_HEADER){
+			ISOException.throwIt(ISO7816.SW_DATA_INVALID);
+		}
 	}
 }

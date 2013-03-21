@@ -24,40 +24,6 @@ package de.opentlssc.tls;
  *
  */
 public class Constants extends StaticTool{
-	public static final byte	CLA													= (byte) 0x80;
-
-	public static final byte	INS_WORK											= 0x10;
-	public static final byte	INS_INITIATE										= 0x20;
-	public static final byte	INS_GET_CONFIGURATIONS								= 0x30;
-	public static final byte	INS_SET_CONFIGURATION								= 0x31;
-	public static final byte	INS_PERSO_PIN										= 0x40;
-	public static final byte	INS_PERSO_DATA										= 0x41;
-	public static final byte	INS_USER_PIN										= 0x42;
-
-	public static final byte	INS_DEBUG_DUMP_ARRAY								= (byte) 0xFF;
-	public static final byte	INS_DEBUG_TEST2										= (byte) 0xFE;
-	public static final byte	INS_DEBUG_INITIATE									= (byte) 0xFD;
-	public static final byte	INS_DEBUG_DUMP										= (byte) 0xFC;
-	public static final byte	INS_DEBUG_SET_EMU									= (byte) 0xFB;
-	public static final byte	INS_DEBUG_GET_EXCEPTION_HISTORY						= (byte) 0xFA;
-	public static final byte	INS_DEBUG_RENEGOTIATE								= (byte) 0xF9;
-	public static final byte	INS_DEBUG_INFO										= (byte) 0xF8;
-
-	public static final byte	RESPONSE_TYPE_DEBUG									= 0x00;
-	public static final byte	RESPONSE_TYPE_DEBUG_DUMP_TLS						= (byte) 0xF0;
-	public static final byte	RESPONSE_TYPE_DEBUG_DUMP_ARRAY						= (byte) 0xE0;
-	public static final byte	RESPONSE_TYPE_DEBUG_EXCEPTION_HISTORY				= (byte) 0xD0;
-	public static final byte	RESPONSE_TYPE_TLS_RECORD							= 0x10;
-	public static final byte	RESPONSE_TYPE_EMPTY									= 0x20;
-	public static final byte	RESPONSE_TYPE_CONFIGURATION_LIST					= 0x30;
-
-	public static final byte	TLV_TYPE_ENTRY = 0;
-	public static final byte 	TLV_TYPE_HOSTNAME = 1;
-	public static final byte 	TLV_TYPE_PORT = 2;
-	public static final byte	TLV_TYPE_DATA	= 3;
-	public static final byte	TLV_TYPE_CONFIG	= 4;
-	public static final byte	TLV_TYPE_PERSO_DATA	= 5;
-	public static final byte	TLV_TYPE_ID	= 6;
 	
 	// TLS constants
 	static final byte	TLS_COMPRESSION_METHOD_NULL							= 0;
@@ -171,19 +137,14 @@ public class Constants extends StaticTool{
 
 	static final short	OFFSET_TLS_CERTIFICATE_LENGTH_IN_RECORD				= LENGTH_TLS_RECORD_HEADER + LENGTH_TLS_HANDSHAKE_HEADER + 3;
 	static final short	OFFSET_TLS_CERTIFICATE_DATA_IN_RECORD				= OFFSET_TLS_CERTIFICATE_LENGTH_IN_RECORD + 3;
-	static final short	OFFSET_TLS_FINISHED_IN_RECORD									= LENGTH_TLS_RECORD_HEADER + LENGTH_TLS_HANDSHAKE_HEADER;
+	static final short	OFFSET_TLS_FINISHED_IN_RECORD						= LENGTH_TLS_RECORD_HEADER + LENGTH_TLS_HANDSHAKE_HEADER;
 	static final short	OFFSET_TLS_RECORD_LENGTH							= 3;
 	static final short	OFFSET_TLS_RECORD_TYPE_BYTE							= 0;
-	static final short	OFFSET_TLS_HANDSHAKE_LENGTH_IN_RECORD							= 1;
+	static final short	OFFSET_TLS_HANDSHAKE_LENGTH_IN_RECORD_CONTENT		= 1;
 	static final short	LENGTH_TLS_ALERT									= 2;
 	static final short	LENGTH_TLS_MAC_HEADER								= 13;
 
 	static final short	ZERO												= 0;
-
-
-
-
-
 
 	static ArrayPointer				labelMasterSecret;
 	static ArrayPointer				labelClientFinished;

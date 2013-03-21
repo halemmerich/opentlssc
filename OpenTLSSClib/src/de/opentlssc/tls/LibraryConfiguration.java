@@ -60,11 +60,7 @@ class LibraryConfiguration {
 	static final short	CONFIG_TRANSIENT_BIG_WORKSPACES			= 2;
 	static boolean		CONFIG_STORE_CONNECTION_STATES_IN_RAM	= true;
 	static final short	CONFIG_KEYBLOCK_MAX_SIZE				= 128;
-	static final short	CONFIG_PERSO_DATA_SIZE					= 2048;
-	static final byte	CONFIG_PERSO_PIN_MAX_TRIES				= 3;
-//	static final byte[]	CONFIG_PERSO_PIN_VALUE					= new byte [] {0,0,0,0};
-	static final byte	CONFIG_USER_PIN_MAX_TRIES				= 3;
-//	static final byte[]	CONFIG_USER_PIN_VALUE					= new byte [] {0,0,0,0};
+	
 	// cipher suite configurations
 	static boolean		CONFIG_NULL_CIPHER						= true;
 	static boolean		CONFIG_AES_128							= true;
