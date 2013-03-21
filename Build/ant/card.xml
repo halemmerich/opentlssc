@@ -1,7 +1,25 @@
 <?xml version="1.0"?>
+<!--
+Copyright 2013 Martin Boonk
+
+This file is part of the OpenTLSSC.
+
+The OpenTLSSC is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+The OpenTLSSC is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with the OpenTLSSC.  If not, see <http://www.gnu.org/licenses/>.
+-->
 <project name="Card">
 	<import file="javacardbuild.xml"/>
-	
+
 	<path id="gpj-classpath">
 		<pathelement location="${env.gpj2010}/gpj.jar" />
 		<pathelement location="${env.gpj2010}/bcprov-jdk16-143.jar" />
@@ -12,8 +30,6 @@
 			<arg line="-load ${code.capfile}" />
 			<arg line="-install" />
 			<arg line="-priv ${code.cardprivilege}" />
-			<arg line="-list" />
-			<classpath refid="gpj-classpath" />
 		</java>
 	</target>
 
@@ -21,7 +37,6 @@
 		<java jar="${env.gpj2010}/gpj.jar" fork="true">
 			<arg line="-deletedeps" />
 			<arg line="-delete ${code.package.aid.gp}" />
-			<arg line="-list" />
 			<classpath refid="gpj-classpath" />
 		</java>
 	</target>

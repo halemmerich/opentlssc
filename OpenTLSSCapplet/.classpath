@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
 	<classpathentry kind="src" path="src"/>
-	<classpathentry exported="true" kind="con" path="org.eclipse.jdt.USER_LIBRARY/JavaCard222"/>
-	<classpathentry combineaccessrules="false" exported="true" kind="src" path="/OpenTLSSClib"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/JavaCard222"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/OpenTLSSClib"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

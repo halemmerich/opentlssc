@@ -1,4 +1,22 @@
 <?xml version="1.0"?>
+<!--
+Copyright 2013 Martin Boonk
+
+This file is part of the OpenTLSSC.
+
+The OpenTLSSC is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+The OpenTLSSC is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with the OpenTLSSC.  If not, see <http://www.gnu.org/licenses/>.
+-->
 <project name="JCWDE">
 	<description>ANT script file for JavaCard 2.2.2 JCWDE use</description>
 
@@ -7,18 +25,18 @@
 		<pathelement location="${env.javacard222.api}" />
 		<pathelement location="${env.javacard222.apduio}" />
 		<pathelement location="${env.javacard222.installer}" />
-		<pathelement location="bin" />
+		<path refid="jcwde-applets" />
 	</path>
 	
 	<target name="createJcwdeConfig">
-		<echo file="jcwde.config">${jcwde.installer.applet}${line.separator}</echo>
-		<echo file="jcwde.config" append="true">${code.package}.${code.classname} ${code.aid}</echo>
+		<echo file="${file.jcwde.config}">${jcwde.installer.applet}${line.separator}</echo>
+		<echo file="${file.jcwde.config}" append="true">${code.package}.${code.classname} ${code.aid}</echo>
 	</target>
 	
 	<target name="jcwdeStart" depends="createJcwdeConfig" description="Start the JCWDE with debugging">
 		<java classname="com.sun.javacard.jcwde.Main" fork="true" failonerror="true">
 			<arg line="-verbose" />
-			<arg line="jcwde.config" />
+			<arg line="${file.jcwde.config}" />
 			<jvmarg line="-agentlib:jdwp=transport=dt_socket,server=y,address=${config.jcwde.port},suspend=n" />
 			<classpath refid="jcwde-classpath"/>
 		</java>
