@@ -25,8 +25,10 @@ import javacardx.crypto.Cipher;
 
 public class TLS {
 	private byte handshakeState = 0;
+	private short handshakeCounter;
 	private byte transmissionState;
 	private byte tlsState;
+	private boolean abbreviatedHandshake;
 	
 	private TransientTools transientTools;
 	private TlsTools tlsTools;
@@ -41,7 +43,6 @@ public class TLS {
 			LibraryConfiguration.emu = true;
 		}
 		Constants.init();
-		Data.init();
 		recordTools = new RecordTools(this);
 		cryptoTools = new CryptoTools(this);
 		transientTools = new TransientTools();
@@ -61,6 +62,12 @@ public class TLS {
 	}
 	
 	public void initializeTls(){
+		handshakeCounter = 0;
+		abbreviatedHandshake = false;
+		initHandshake();
+	}
+	
+	public void initHandshake(){
 		handshakeState = Constants.STATE_HANDSHAKE_HELLO;
 		transmissionState = Constants.STATE_TRANSMISSION_SEND;
 		tlsState = Constants.STATE_APPLET_HANDSHAKE;
@@ -79,15 +86,17 @@ public class TLS {
 			case Constants.STATE_HANDSHAKE_HELLO:
 				incomingRecordDataLength = unwrapRecordData(incomingRecordData, incomingRecordDataOffset, incomingRecordDataLength);
 				recordTools.parseServerHello(incomingRecordData, incomingRecordDataOffset, incomingRecordDataLength);
-
-				if (TlsSecurityParameters.abbreviatedHandshake){
+				
+				ArrayPointer currentSessionId = getTlsTools().getCurrentClientSecurityParameters().sessionId;
+				ArrayPointer nextSessionId = getTlsTools().getNextClientSecurityParameters().sessionId;
+				
+				if (abbreviatedHandshake && currentSessionId.length == nextSessionId.length && 0 == Util.arrayCompare(currentSessionId.data, currentSessionId.offset, nextSessionId.data, nextSessionId.offset, currentSessionId.length)){
 					handshakeState = Constants.STATE_HANDSHAKE_CHANGE_CIPHER_SPEC;
 					tlsTools.copyMasterSecretToNextSecurityParameters();
 					tlsTools.generateKeyBlock(tlsTools.getNextClientSecurityParameters());
 				} else {
 					handshakeState = Constants.STATE_HANDSHAKE_CERTIFICATE;
-				}
-				
+				}				
 				break;
 			case Constants.STATE_HANDSHAKE_CERTIFICATE:
 				incomingRecordDataLength = unwrapRecordData(incomingRecordData, incomingRecordDataOffset, incomingRecordDataLength);
@@ -110,7 +119,7 @@ public class TLS {
 			case Constants.STATE_HANDSHAKE_FINISHED:
 				incomingRecordDataLength = unwrapRecordData(incomingRecordData, incomingRecordDataOffset, incomingRecordDataLength);
 				recordTools.parseFinished(incomingRecordData, incomingRecordDataOffset, incomingRecordDataLength);
-				if (TlsSecurityParameters.abbreviatedHandshake){
+				if (abbreviatedHandshake){
 					handshakeState = Constants.STATE_HANDSHAKE_CHANGE_CIPHER_SPEC;
 					transmissionState = Constants.STATE_TRANSMISSION_SEND;
 				} else {
@@ -125,9 +134,17 @@ public class TLS {
 			tlsTools.activateCurrentClientSecurityParameters();
 			switch (handshakeState) {
 			case Constants.STATE_HANDSHAKE_HELLO:
-				TlsSecurityParameters.abbreviatedHandshake = false;
 				tlsTools.handshakeHashInit();
 				transmissionState = Constants.STATE_TRANSMISSION_RECEIVE;
+				
+				ArrayPointer sessionId = getTlsTools().getCurrentClientSecurityParameters().sessionId;
+				
+				if (sessionId.length > 0){
+					abbreviatedHandshake = true;
+				} else {
+					abbreviatedHandshake = false;
+				}
+				
 				outgoingRecordDataOffset = recordTools.writeClientHello(outgoingRecordData, outgoingRecordDataOffset);
 				return wrapRecordData(outgoingRecordData, initalOutgoingOffset, (short) (outgoingRecordDataOffset - initalOutgoingOffset));
 			case Constants.STATE_HANDSHAKE_KEY_EXCHANGE:
@@ -143,7 +160,7 @@ public class TLS {
 				tlsTools.makeNextSecurityParametersCurrentForClient();
 				return offset;
 			case Constants.STATE_HANDSHAKE_FINISHED:
-				if (TlsSecurityParameters.abbreviatedHandshake){
+				if (abbreviatedHandshake){
 					handshakeState = Constants.STATE_HANDSHAKE_HELLO;
 					transmissionState = Constants.STATE_TRANSMISSION_SEND;
 					tlsState = Constants.STATE_APPLET_APPLICATION_DATA;

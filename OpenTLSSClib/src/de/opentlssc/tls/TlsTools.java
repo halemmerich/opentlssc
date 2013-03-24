@@ -396,13 +396,17 @@ class TlsTools {
 
 	void computeVerifyData(TlsSecurityParameters state,
 			byte[] handshakeHash, short offset) {
-		prf.expand(Data.verifyData, state.masterSecret,
+		prf.expand(state.verifyData, state.masterSecret,
 				Constants.labelClientFinished, handshakeHash, offset,
-				digestForFinishedClient.getLength(), Data.verifyData.length);
+				digestForFinishedClient.getLength(), Constants.LENGTH_VERIFY_DATA);
+	}
+
+	public void copySessionIdToNextSecurityParameters() {
+		Util.arrayCopyNonAtomic(securityParameters[currentClientSecurityParametersPointer].sessionId.data, securityParameters[currentClientSecurityParametersPointer].sessionId.offset, getNextClientSecurityParameters().sessionId.data, getNextClientSecurityParameters().sessionId.offset, securityParameters[currentClientSecurityParametersPointer].sessionId.length);
 	}
 
 	public void copyMasterSecretToNextSecurityParameters() {
-		securityParameters[currentClientSecurityParametersPointer].masterSecret.copy(getNextClientSecurityParameters().masterSecret.data, getCurrentClientSecurityParameters().masterSecret.offset);
+		Util.arrayCopyNonAtomic(securityParameters[currentClientSecurityParametersPointer].masterSecret.data, securityParameters[currentClientSecurityParametersPointer].masterSecret.offset, getNextClientSecurityParameters().masterSecret.data, getNextClientSecurityParameters().masterSecret.offset, securityParameters[currentClientSecurityParametersPointer].masterSecret.length);
 	}
 
 	

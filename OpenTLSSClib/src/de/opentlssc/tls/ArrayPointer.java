@@ -17,9 +17,8 @@
 
 package de.opentlssc.tls;
 
-import javacard.framework.Util;
 
-class ArrayPointer extends DataElement {
+class ArrayPointer {
 	byte[]	data;
 	short	offset;
 	short	length;
@@ -33,18 +32,5 @@ class ArrayPointer extends DataElement {
 
 	short getAbsoluteOffset(short relativeOffset) {
 		return (short) (relativeOffset + offset);
-	}
-
-	void set(byte data) {
-		this.data[offset] = data;
-	}
-
-	void set(byte[] src, short srcOff) {
-		Util.arrayCopyNonAtomic(src, srcOff, this.data, this.offset, this.length);
-	}
-
-	short copy(byte[] dest, short destOff) {
-		Util.arrayCopyNonAtomic(data, offset, dest, destOff, length);
-		return length;
 	}
 }

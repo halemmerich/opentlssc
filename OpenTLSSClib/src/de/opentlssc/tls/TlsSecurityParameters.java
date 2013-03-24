@@ -33,13 +33,15 @@ class TlsSecurityParameters {
 	ArrayPointer	serverRandomBytes;
 	ArrayPointer	masterSecret;
 
+	ArrayPointer	sessionId;
+	ArrayPointer	verifyData;
+
 	PrimitiveShort	clientSequenceNumber;
 	PrimitiveShort	serverSequenceNumber;
 
 	private byte[]	data;
 
 	short			cipherSuite				= 0;
-	static boolean	abbreviatedHandshake	= false;
 
 	short			alert;
 
@@ -47,11 +49,11 @@ class TlsSecurityParameters {
 		short offset = 0;
 		if (LibraryConfiguration.CONFIG_STORE_CONNECTION_STATES_IN_RAM) {
 			data = JCSystem.makeTransientByteArray((short) (LibraryConfiguration.CONFIG_KEYBLOCK_MAX_SIZE
-					+ Constants.LENGTH_RANDOM_BYTES + Constants.LENGTH_RANDOM_BYTES + Constants.LENGTH_MASTER_SECRET),
+					+ Constants.LENGTH_RANDOM_BYTES + Constants.LENGTH_RANDOM_BYTES + Constants.LENGTH_MASTER_SECRET + Constants.LENGTH_SESSIONID + Constants.LENGTH_VERIFY_DATA),
 					JCSystem.CLEAR_ON_DESELECT);
 		} else {
 			data = new byte[LibraryConfiguration.CONFIG_KEYBLOCK_MAX_SIZE + Constants.LENGTH_RANDOM_BYTES
-					+ Constants.LENGTH_RANDOM_BYTES + Constants.LENGTH_MASTER_SECRET];
+					+ Constants.LENGTH_RANDOM_BYTES + Constants.LENGTH_MASTER_SECRET + Constants.LENGTH_SESSIONID + Constants.LENGTH_VERIFY_DATA];
 		}
 		clientRandomBytes = new ArrayPointer(data, offset, Constants.LENGTH_RANDOM_BYTES);
 		offset += Constants.LENGTH_RANDOM_BYTES;
@@ -59,6 +61,10 @@ class TlsSecurityParameters {
 		offset += Constants.LENGTH_RANDOM_BYTES;
 		masterSecret = new ArrayPointer(data, offset, Constants.LENGTH_MASTER_SECRET);
 		offset += Constants.LENGTH_MASTER_SECRET;
+		sessionId = new ArrayPointer(data, offset, Constants.LENGTH_SESSIONID);
+		offset += Constants.LENGTH_SESSIONID;
+		verifyData = new ArrayPointer(data, offset, Constants.LENGTH_VERIFY_DATA);
+		offset += Constants.LENGTH_VERIFY_DATA;
 
 		keyBlock = new ArrayPointer(data, offset, LibraryConfiguration.CONFIG_KEYBLOCK_MAX_SIZE);
 		clientSequenceNumber = new PrimitiveShort((short) 0, (short) 8);
@@ -80,6 +86,8 @@ class TlsSecurityParameters {
 
 		clientSequenceNumber.value = 0;
 		serverSequenceNumber.value = 0;
+		
+		sessionId.length = 0;
 	}
 
 	/**
