@@ -113,7 +113,7 @@ public class ExampleApplet extends Applet implements ExtendedLength {
 			state = STATE_REINIT_TLS;
 			break;
 		case STATE_REINIT_TLS:
-			tls.initializeTls();
+			tls.initHandshake();
 			state = STATE_ABBREVIATED_HANDSHAKE;
 			break;
 		case STATE_ABBREVIATED_HANDSHAKE:
