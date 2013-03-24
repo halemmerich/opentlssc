@@ -58,17 +58,19 @@ class LibraryConfiguration {
 	static final short	CONFIG_BIG_WORKSPACES					= 2;
 	static final short	CONFIG_TRANSIENT_WORKSPACES				= 6;
 	static final short	CONFIG_TRANSIENT_BIG_WORKSPACES			= 2;
-	static boolean		CONFIG_STORE_CONNECTION_STATES_IN_RAM	= true;
+	static final boolean	CONFIG_TRANSIENT_PRF					= true;
+	static final boolean	CONFIG_TRANSIENT_HMAC					= true;
+	static final boolean		CONFIG_STORE_CONNECTION_STATES_IN_RAM	= true;
 	static final short	CONFIG_KEYBLOCK_MAX_SIZE				= 128;
 	
 	// cipher suite configurations
-	static boolean		CONFIG_NULL_CIPHER						= true;
-	static boolean		CONFIG_AES_128							= true;
-	static boolean		CONFIG_AES_256							= true;
-	static boolean		CONFIG_3DES								= false;
-	static boolean		CONFIG_MD5								= false;
-	static boolean		CONFIG_SHA								= true;
-	static boolean		CONFIG_SHA_256							= false;
+	static final boolean		CONFIG_NULL_CIPHER						= true;
+	static final boolean		CONFIG_AES_128							= true;
+	static final boolean		CONFIG_AES_256							= true;
+	static final boolean		CONFIG_3DES								= false;
+	static final boolean		CONFIG_MD5								= false;
+	static final boolean		CONFIG_SHA								= true;
+	static final boolean		CONFIG_SHA_256							= false;
 
 	
 	static boolean		emu										= false;

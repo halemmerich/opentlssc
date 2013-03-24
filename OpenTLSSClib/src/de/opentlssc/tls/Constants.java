@@ -23,7 +23,7 @@ package de.opentlssc.tls;
  * @author Martin Boonk
  *
  */
-public class Constants extends StaticTool{
+public class Constants{
 	
 	// TLS constants
 	static final byte	TLS_COMPRESSION_METHOD_NULL							= 0;

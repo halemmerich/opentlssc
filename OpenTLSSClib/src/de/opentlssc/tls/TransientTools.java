@@ -26,11 +26,11 @@ import javacard.framework.Util;
  * @author Martin Boonk
  *
  */
-class TransientTools extends StaticTool {
+class TransientTools {
 	private static ByteArray [] workspaces;
 	private static ByteArray [] bigWorkspaces;
 	
-	static void init(){
+	TransientTools(){
 		bigWorkspaces = new ByteArray [LibraryConfiguration.CONFIG_BIG_WORKSPACES];
 		for (short i = 0; i < bigWorkspaces.length; i++){
 			bigWorkspaces[i] = new ByteArray();
@@ -58,7 +58,7 @@ class TransientTools extends StaticTool {
 	 * 
 	 * @param workspace
 	 */
-	static void freeWorkspace(byte [] workspace){
+	void freeWorkspace(byte [] workspace){
 		ByteArray [] ws;
 		if (workspace.length == LibraryConfiguration.CONFIG_TRANSIENT_BIG_WORKSPACE_LENGTH){
 			ws = bigWorkspaces;
@@ -84,7 +84,7 @@ class TransientTools extends StaticTool {
 	 * @param big
 	 * @return
 	 */
-	static byte [] getWorkspace(Object caller, boolean big){
+	byte [] getWorkspace(Object caller, boolean big){
 		ByteArray [] ws = workspaces;
 		if (big){
 			ws = bigWorkspaces;
@@ -100,14 +100,14 @@ class TransientTools extends StaticTool {
 		return null;
 	}
 
-	static void reset() {
-		for (short i = 0; i < workspaces.length; i++){
+	void reset() {
+		for (short i = 0; i < workspaces.length; i++) {
 			workspaces[i].locked = false;
 			workspaces[i].user = null;
-	}
-		for (short i = 0; i < bigWorkspaces.length; i++){
+		}
+		for (short i = 0; i < bigWorkspaces.length; i++) {
 			bigWorkspaces[i].locked = false;
 			bigWorkspaces[i].user = null;
-	}
+		}
 	}
 }

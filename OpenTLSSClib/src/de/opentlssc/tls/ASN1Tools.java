@@ -24,7 +24,7 @@ package de.opentlssc.tls;
  * @author Martin Boonk
  *
  */
-class ASN1Tools extends StaticTool{
+class ASN1Tools{
 	
 	/**
 	 * Get length including length of identifier and length octets

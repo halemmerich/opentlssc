@@ -28,6 +28,11 @@ public class TLS {
 	private byte transmissionState;
 	private byte tlsState;
 	
+	private TransientTools transientTools;
+	private TlsTools tlsTools;
+	private CryptoTools cryptoTools;
+	private RecordTools recordTools;
+	
 	public TLS(){
 
 		try {
@@ -37,10 +42,22 @@ public class TLS {
 		}
 		Constants.init();
 		Data.init();
-		CryptoTools.init();
-		TlsTools.init();
-		TransientTools.init();
-		ASN1Tools.init();
+		recordTools = new RecordTools(this);
+		cryptoTools = new CryptoTools(this);
+		transientTools = new TransientTools();
+		tlsTools = new TlsTools(this);
+	}
+	
+	CryptoTools getCryptoTools(){
+		return cryptoTools;
+	}
+	
+	TlsTools getTlsTools(){
+		return tlsTools;
+	}
+	
+	TransientTools getTransientTools(){
+		return transientTools;
 	}
 	
 	public void initializeTls(){
@@ -57,16 +74,16 @@ public class TLS {
 		short initalOutgoingOffset = outgoingRecordDataOffset;
 		if (incomingRecordDataLength > 0 && transmissionState == Constants.STATE_TRANSMISSION_RECEIVE && tlsState == Constants.STATE_APPLET_HANDSHAKE){
 			RecordTools.checkRecord(incomingRecordData, incomingRecordDataOffset, incomingRecordDataLength);
-			TlsTools.activateCurrentServerSecurityParameters();
+			tlsTools.activateCurrentServerSecurityParameters();
 			switch (handshakeState) {
 			case Constants.STATE_HANDSHAKE_HELLO:
 				incomingRecordDataLength = unwrapRecordData(incomingRecordData, incomingRecordDataOffset, incomingRecordDataLength);
-				RecordTools.parseServerHello(incomingRecordData, incomingRecordDataOffset, incomingRecordDataLength);
+				recordTools.parseServerHello(incomingRecordData, incomingRecordDataOffset, incomingRecordDataLength);
 
 				if (TlsSecurityParameters.abbreviatedHandshake){
 					handshakeState = Constants.STATE_HANDSHAKE_CHANGE_CIPHER_SPEC;
-					TlsTools.copyMasterSecretToNextSecurityParameters();
-					TlsTools.generateKeyBlock(TlsTools.getNextClientSecurityParameters());
+					tlsTools.copyMasterSecretToNextSecurityParameters();
+					tlsTools.generateKeyBlock(tlsTools.getNextClientSecurityParameters());
 				} else {
 					handshakeState = Constants.STATE_HANDSHAKE_CERTIFICATE;
 				}
@@ -74,25 +91,25 @@ public class TLS {
 				break;
 			case Constants.STATE_HANDSHAKE_CERTIFICATE:
 				incomingRecordDataLength = unwrapRecordData(incomingRecordData, incomingRecordDataOffset, incomingRecordDataLength);
-				RecordTools.parseCertificate(incomingRecordData, incomingRecordDataOffset, incomingRecordDataLength);
+				recordTools.parseCertificate(incomingRecordData, incomingRecordDataOffset, incomingRecordDataLength);
 				handshakeState = Constants.STATE_HANDSHAKE_HELLO_DONE;
 				break;
 			case Constants.STATE_HANDSHAKE_HELLO_DONE:
 				incomingRecordDataLength = unwrapRecordData(incomingRecordData, incomingRecordDataOffset, incomingRecordDataLength);
-				RecordTools.parseServerHelloDone(incomingRecordData, incomingRecordDataOffset, incomingRecordDataLength);
+				recordTools.parseServerHelloDone(incomingRecordData, incomingRecordDataOffset, incomingRecordDataLength);
 				handshakeState = Constants.STATE_HANDSHAKE_KEY_EXCHANGE;
 				transmissionState = Constants.STATE_TRANSMISSION_SEND;
 				break;
 			case Constants.STATE_HANDSHAKE_CHANGE_CIPHER_SPEC:
-				TlsTools.serverHashActive = false;
+				tlsTools.serverHashActive = false;
 				incomingRecordDataLength = unwrapRecordData(incomingRecordData, incomingRecordDataOffset, incomingRecordDataLength);
 				RecordTools.parseChangeCipherSpec(incomingRecordData, incomingRecordDataOffset, incomingRecordDataLength);
-				TlsTools.makeNextSecurityParametersCurrentForServer();
+				tlsTools.makeNextSecurityParametersCurrentForServer();
 				handshakeState = Constants.STATE_HANDSHAKE_FINISHED;
 				break;
 			case Constants.STATE_HANDSHAKE_FINISHED:
 				incomingRecordDataLength = unwrapRecordData(incomingRecordData, incomingRecordDataOffset, incomingRecordDataLength);
-				RecordTools.parseFinished(incomingRecordData, incomingRecordDataOffset, incomingRecordDataLength);
+				recordTools.parseFinished(incomingRecordData, incomingRecordDataOffset, incomingRecordDataLength);
 				if (TlsSecurityParameters.abbreviatedHandshake){
 					handshakeState = Constants.STATE_HANDSHAKE_CHANGE_CIPHER_SPEC;
 					transmissionState = Constants.STATE_TRANSMISSION_SEND;
@@ -105,25 +122,25 @@ public class TLS {
 			}		
 		}
 		if (transmissionState == Constants.STATE_TRANSMISSION_SEND && tlsState == Constants.STATE_APPLET_HANDSHAKE){
-			TlsTools.activateCurrentClientSecurityParameters();
+			tlsTools.activateCurrentClientSecurityParameters();
 			switch (handshakeState) {
 			case Constants.STATE_HANDSHAKE_HELLO:
 				TlsSecurityParameters.abbreviatedHandshake = false;
-				TlsTools.handshakeHashInit();
+				tlsTools.handshakeHashInit();
 				transmissionState = Constants.STATE_TRANSMISSION_RECEIVE;
-				outgoingRecordDataOffset = RecordTools.writeClientHello(outgoingRecordData, outgoingRecordDataOffset);
+				outgoingRecordDataOffset = recordTools.writeClientHello(outgoingRecordData, outgoingRecordDataOffset);
 				return wrapRecordData(outgoingRecordData, initalOutgoingOffset, (short) (outgoingRecordDataOffset - initalOutgoingOffset));
 			case Constants.STATE_HANDSHAKE_KEY_EXCHANGE:
 				handshakeState = Constants.STATE_HANDSHAKE_CHANGE_CIPHER_SPEC;
-				outgoingRecordDataOffset = RecordTools.writeClientKeyExchange(outgoingRecordData, outgoingRecordDataOffset);
-				TlsTools.generateKeyBlock(TlsTools.getNextClientSecurityParameters());
+				outgoingRecordDataOffset = recordTools.writeClientKeyExchange(outgoingRecordData, outgoingRecordDataOffset);
+				tlsTools.generateKeyBlock(tlsTools.getNextClientSecurityParameters());
 				return wrapRecordData(outgoingRecordData, initalOutgoingOffset, (short) (outgoingRecordDataOffset - initalOutgoingOffset));
 			case Constants.STATE_HANDSHAKE_CHANGE_CIPHER_SPEC:
-				TlsTools.clientHashActive = false;
+				tlsTools.clientHashActive = false;
 				handshakeState = Constants.STATE_HANDSHAKE_FINISHED;
-				outgoingRecordDataOffset = RecordTools.writeChangeCipherSpec(outgoingRecordData, outgoingRecordDataOffset);
+				outgoingRecordDataOffset = recordTools.writeChangeCipherSpec(outgoingRecordData, outgoingRecordDataOffset);
 				short offset = wrapRecordData(outgoingRecordData, initalOutgoingOffset, (short) (outgoingRecordDataOffset - initalOutgoingOffset));
-				TlsTools.makeNextSecurityParametersCurrentForClient();
+				tlsTools.makeNextSecurityParametersCurrentForClient();
 				return offset;
 			case Constants.STATE_HANDSHAKE_FINISHED:
 				if (TlsSecurityParameters.abbreviatedHandshake){
@@ -134,7 +151,7 @@ public class TLS {
 					handshakeState = Constants.STATE_HANDSHAKE_CHANGE_CIPHER_SPEC;
 					transmissionState = Constants.STATE_TRANSMISSION_RECEIVE;
 				}
-				outgoingRecordDataOffset = RecordTools.writeFinished(outgoingRecordData, outgoingRecordDataOffset);
+				outgoingRecordDataOffset = recordTools.writeFinished(outgoingRecordData, outgoingRecordDataOffset);
 
 				return wrapRecordData(outgoingRecordData, initalOutgoingOffset, (short) (outgoingRecordDataOffset - initalOutgoingOffset));
 			}
@@ -145,27 +162,27 @@ public class TLS {
 	}
 
 	private void createMacHeader(byte typeByte, short contentLength){
-		byte [] workspace = TransientTools.getWorkspace(this, false);
+		byte [] workspace = transientTools.getWorkspace(this, false);
 		
-		TlsTools.sendSequenceCounter.copy(workspace, (short) 0);
+		tlsTools.sendSequenceCounter.copy(workspace, (short) 0);
 		
 		
 		workspace[8] = typeByte;
 		Util.setShort(workspace, (short) 9, Constants.TLS_VERSION);
 		Util.setShort(workspace, (short) 11, contentLength);
-		TlsTools.payloadMac.init(TlsTools.keyMac);
-		TlsTools.payloadMac.update(workspace, (short) 0, Constants.LENGTH_TLS_MAC_HEADER);
-		TransientTools.freeWorkspace(workspace);
+		tlsTools.payloadMac.init(tlsTools.keyMac);
+		tlsTools.payloadMac.update(workspace, (short) 0, Constants.LENGTH_TLS_MAC_HEADER);
+		transientTools.freeWorkspace(workspace);
 	}
 	
 	private short doMac(byte[] outgoingRecordData,
 			short outgoingRecordDataOffset, short outgoingRecordDataLength) {
-		if (TlsTools.payloadMac != null) {
+		if (tlsTools.payloadMac != null) {
 			short contentLengthOffset = (short) (outgoingRecordDataOffset + Constants.OFFSET_TLS_RECORD_LENGTH);
 			short contentLength = Util.getShort(outgoingRecordData, contentLengthOffset);
 			
 			createMacHeader(outgoingRecordData[(short)(Constants.OFFSET_TLS_RECORD_TYPE_BYTE + outgoingRecordDataOffset)], contentLength);
-			short maclength = TlsTools.payloadMac.doFinal(outgoingRecordData, (short) (outgoingRecordDataOffset + Constants.LENGTH_TLS_RECORD_HEADER), (short) (outgoingRecordDataLength - Constants.LENGTH_TLS_RECORD_HEADER), outgoingRecordData,
+			short maclength = tlsTools.payloadMac.doFinal(outgoingRecordData, (short) (outgoingRecordDataOffset + Constants.LENGTH_TLS_RECORD_HEADER), (short) (outgoingRecordDataLength - Constants.LENGTH_TLS_RECORD_HEADER), outgoingRecordData,
 					(short) (outgoingRecordDataOffset + outgoingRecordDataLength));
 			return (short) (outgoingRecordDataLength + maclength);
 		}
@@ -173,18 +190,18 @@ public class TLS {
 	}
 	
 	private short checkMac(byte [] dataToCheck, short dataToCheckOffset, short dataToCheckLength){
-		if (TlsTools.payloadMac != null){
+		if (tlsTools.payloadMac != null){
 			short contentLengthOffset = (short) (dataToCheckOffset + Constants.OFFSET_TLS_RECORD_LENGTH);
-			short contentLength = (short) (Util.getShort(dataToCheck, contentLengthOffset) - TlsTools.payloadMac.getLength());
+			short contentLength = (short) (Util.getShort(dataToCheck, contentLengthOffset) - tlsTools.payloadMac.getLength());
 			byte typeByte = dataToCheck[(short) (Constants.OFFSET_TLS_RECORD_TYPE_BYTE + dataToCheckOffset)];
 			dataToCheckOffset += Constants.LENGTH_TLS_RECORD_HEADER;
-			dataToCheckLength -= Constants.LENGTH_TLS_RECORD_HEADER + TlsTools.payloadMac.getLength();
+			dataToCheckLength -= Constants.LENGTH_TLS_RECORD_HEADER + tlsTools.payloadMac.getLength();
 			createMacHeader(typeByte, contentLength);
-			byte [] expectedMac = TransientTools.getWorkspace(this, false);
-			TlsTools.payloadMac.doFinal(dataToCheck, dataToCheckOffset, dataToCheckLength, expectedMac,
+			byte [] expectedMac = transientTools.getWorkspace(this, false);
+			tlsTools.payloadMac.doFinal(dataToCheck, dataToCheckOffset, dataToCheckLength, expectedMac,
 					(short) 0);
-			boolean macIsCorrect = 0==Util.arrayCompare(dataToCheck, (short) (dataToCheckOffset + dataToCheckLength), expectedMac, (short)0, TlsTools.payloadMac.getLength());
-			TransientTools.freeWorkspace(expectedMac);
+			boolean macIsCorrect = 0==Util.arrayCompare(dataToCheck, (short) (dataToCheckOffset + dataToCheckLength), expectedMac, (short)0, tlsTools.payloadMac.getLength());
+			transientTools.freeWorkspace(expectedMac);
 			if (!macIsCorrect){
 				ISOException.throwIt(ISO7816.SW_DATA_INVALID);
 			}
@@ -198,7 +215,7 @@ public class TLS {
 		outgoingRecordDataLength = doMac(outgoingRecordData, outgoingRecordDataOffset, outgoingRecordDataLength);
 		outgoingRecordDataLength = encryptRecordPayload(outgoingRecordData, outgoingRecordDataOffset, outgoingRecordDataLength);
 		resetRecordHeaderLength(outgoingRecordData, outgoingRecordDataOffset, (short) (outgoingRecordDataLength - Constants.LENGTH_TLS_RECORD_HEADER));
-		TlsTools.sendSequenceCounter.value++;
+		tlsTools.sendSequenceCounter.value++;
 		return outgoingRecordDataLength;
 	}
 
@@ -207,22 +224,22 @@ public class TLS {
 		incomingRecordDataLength = decryptRecordPayload(incomingRecordData, incomingRecordDataOffset, incomingRecordDataLength);
 		incomingRecordDataLength = checkMac(incomingRecordData, incomingRecordDataOffset, incomingRecordDataLength);
 		resetRecordHeaderLength(incomingRecordData, incomingRecordDataOffset, (short) (incomingRecordDataLength - Constants.LENGTH_TLS_RECORD_HEADER));
-		TlsTools.sendSequenceCounter.value++;
+		tlsTools.sendSequenceCounter.value++;
 		return incomingRecordDataLength;
 	}
 
 	private short decryptRecordPayload(byte[] incomingRecordData,
 			short incomingRecordDataOffset, short incomingRecordDataLength) {
-		if (TlsTools.payloadCipher != null){
-			TlsTools.payloadCipher.init(TlsTools.payloadKey, Cipher.MODE_DECRYPT, incomingRecordData, (short) (incomingRecordDataOffset + Constants.LENGTH_TLS_RECORD_HEADER), TlsTools.LENGTH_PAYLOAD_BLOCKSIZE);
-			short cipherTextOffset = (short) (incomingRecordDataOffset + Constants.LENGTH_TLS_RECORD_HEADER + TlsTools.LENGTH_PAYLOAD_BLOCKSIZE);
-			short cipherTextLength = (short) (incomingRecordDataLength - Constants.LENGTH_TLS_RECORD_HEADER - TlsTools.LENGTH_PAYLOAD_BLOCKSIZE);
-			short plaintextLength = TlsTools.payloadCipher.doFinal(incomingRecordData, cipherTextOffset, cipherTextLength, incomingRecordData, cipherTextOffset);
+		if (tlsTools.payloadCipher != null){
+			tlsTools.payloadCipher.init(tlsTools.payloadKey, Cipher.MODE_DECRYPT, incomingRecordData, (short) (incomingRecordDataOffset + Constants.LENGTH_TLS_RECORD_HEADER), tlsTools.LENGTH_PAYLOAD_BLOCKSIZE);
+			short cipherTextOffset = (short) (incomingRecordDataOffset + Constants.LENGTH_TLS_RECORD_HEADER + tlsTools.LENGTH_PAYLOAD_BLOCKSIZE);
+			short cipherTextLength = (short) (incomingRecordDataLength - Constants.LENGTH_TLS_RECORD_HEADER - tlsTools.LENGTH_PAYLOAD_BLOCKSIZE);
+			short plaintextLength = tlsTools.payloadCipher.doFinal(incomingRecordData, cipherTextOffset, cipherTextLength, incomingRecordData, cipherTextOffset);
 			short paddingLength = findPaddingLengthInPlaintext(incomingRecordData, cipherTextOffset, plaintextLength);
 			checkPadding(incomingRecordData, (short) (incomingRecordDataOffset + incomingRecordDataLength - paddingLength - 1), paddingLength);
 			
-			moveBytes(incomingRecordData, cipherTextOffset, plaintextLength, (short) - TlsTools.LENGTH_PAYLOAD_BLOCKSIZE);
-			return (short) (incomingRecordDataLength - paddingLength - 1 - TlsTools.LENGTH_PAYLOAD_BLOCKSIZE);
+			moveBytes(incomingRecordData, cipherTextOffset, plaintextLength, (short) - tlsTools.LENGTH_PAYLOAD_BLOCKSIZE);
+			return (short) (incomingRecordDataLength - paddingLength - 1 - tlsTools.LENGTH_PAYLOAD_BLOCKSIZE);
 		}
 		return incomingRecordDataLength;
 		
@@ -239,14 +256,14 @@ public class TLS {
 
 	private short encryptRecordPayload(byte[] outgoingRecordData,
 			short outgoingRecordDataOffset, short outgoingRecordDataLength) {
-		if (TlsTools.payloadCipher != null){
+		if (tlsTools.payloadCipher != null){
 			outgoingRecordDataLength = createIvInRecord(outgoingRecordData, outgoingRecordDataOffset, outgoingRecordDataLength);
-			TlsTools.payloadCipher.init(TlsTools.payloadKey, Cipher.MODE_ENCRYPT, outgoingRecordData, (short) (outgoingRecordDataOffset + Constants.LENGTH_TLS_RECORD_HEADER), TlsTools.LENGTH_PAYLOAD_BLOCKSIZE);
+			tlsTools.payloadCipher.init(tlsTools.payloadKey, Cipher.MODE_ENCRYPT, outgoingRecordData, (short) (outgoingRecordDataOffset + Constants.LENGTH_TLS_RECORD_HEADER), tlsTools.LENGTH_PAYLOAD_BLOCKSIZE);
 			outgoingRecordDataLength = padTlsRecord(outgoingRecordData, (short) (outgoingRecordDataOffset), outgoingRecordDataLength);
 			
-			short plaintextOffset = (short) (outgoingRecordDataOffset + TlsTools.LENGTH_PAYLOAD_BLOCKSIZE + Constants.LENGTH_TLS_RECORD_HEADER);
-			short plaintextLength = (short) (outgoingRecordDataLength - TlsTools.LENGTH_PAYLOAD_BLOCKSIZE - Constants.LENGTH_TLS_RECORD_HEADER);
-			short cipherTextLength = TlsTools.payloadCipher.doFinal(outgoingRecordData, plaintextOffset, plaintextLength, outgoingRecordData, plaintextOffset);
+			short plaintextOffset = (short) (outgoingRecordDataOffset + tlsTools.LENGTH_PAYLOAD_BLOCKSIZE + Constants.LENGTH_TLS_RECORD_HEADER);
+			short plaintextLength = (short) (outgoingRecordDataLength - tlsTools.LENGTH_PAYLOAD_BLOCKSIZE - Constants.LENGTH_TLS_RECORD_HEADER);
+			short cipherTextLength = tlsTools.payloadCipher.doFinal(outgoingRecordData, plaintextOffset, plaintextLength, outgoingRecordData, plaintextOffset);
 			outgoingRecordDataLength = (short) (plaintextOffset + cipherTextLength);
 			
 		}
@@ -261,9 +278,9 @@ public class TLS {
 	private short createIvInRecord(byte[] outgoingRecordData,
 			short outgoingRecordDataOffset, short outgoingRecordDataLength) {
 		outgoingRecordDataOffset += Constants.LENGTH_TLS_RECORD_HEADER;
-		moveBytes(outgoingRecordData, outgoingRecordDataOffset, (short) (outgoingRecordDataLength - Constants.LENGTH_TLS_RECORD_HEADER), TlsTools.LENGTH_PAYLOAD_BLOCKSIZE);
-		CryptoTools.generateRandom(outgoingRecordData, outgoingRecordDataOffset, TlsTools.LENGTH_PAYLOAD_BLOCKSIZE);
-		return (short) (outgoingRecordDataLength + TlsTools.LENGTH_PAYLOAD_BLOCKSIZE);
+		moveBytes(outgoingRecordData, outgoingRecordDataOffset, (short) (outgoingRecordDataLength - Constants.LENGTH_TLS_RECORD_HEADER), tlsTools.LENGTH_PAYLOAD_BLOCKSIZE);
+		cryptoTools.generateRandom(outgoingRecordData, outgoingRecordDataOffset, tlsTools.LENGTH_PAYLOAD_BLOCKSIZE);
+		return (short) (outgoingRecordDataLength + tlsTools.LENGTH_PAYLOAD_BLOCKSIZE);
 	}
 
 	private void moveBytes(byte[] dataToMove,
@@ -285,8 +302,8 @@ public class TLS {
 
 	private short padTlsRecord(byte[] recordData,
 			short recordDataOffset, short recordDataLength) {
-		short neededPadding = (byte) (TlsTools.LENGTH_PAYLOAD_BLOCKSIZE - (short) ( (short)(recordDataLength - Constants.LENGTH_TLS_RECORD_HEADER) % TlsTools.LENGTH_PAYLOAD_BLOCKSIZE));
-		neededPadding += CryptoTools.getRandomNumber(Constants.ZERO, (short) ((short) (255 - neededPadding) / TlsTools.LENGTH_PAYLOAD_BLOCKSIZE)) * TlsTools.LENGTH_PAYLOAD_BLOCKSIZE;
+		short neededPadding = (byte) (tlsTools.LENGTH_PAYLOAD_BLOCKSIZE - (short) ( (short)(recordDataLength - Constants.LENGTH_TLS_RECORD_HEADER) % tlsTools.LENGTH_PAYLOAD_BLOCKSIZE));
+		neededPadding += cryptoTools.getRandomNumber(Constants.ZERO, (short) ((short) (255 - neededPadding) / tlsTools.LENGTH_PAYLOAD_BLOCKSIZE)) * tlsTools.LENGTH_PAYLOAD_BLOCKSIZE;
 		
 		Util.arrayFillNonAtomic(recordData, (short) (recordDataOffset + recordDataLength), neededPadding,(byte) (neededPadding - 1));
 		return (short) (recordDataLength + neededPadding);
@@ -298,12 +315,12 @@ public class TLS {
 	}
 
 	public short readRecord(byte [] recordData, short offset, short length, byte [] payloadDestination, short payloadDestinationOffset){
-		TlsTools.activateCurrentServerSecurityParameters();
+		tlsTools.activateCurrentServerSecurityParameters();
 		return unwrapRecordData(recordData, offset, length);
 	}
 
 	public short writeRecord(byte [] payloadData, short payloadDataOffset, short payloadDataLength, byte [] recordData, short recordDataOffset){
-		TlsTools.activateCurrentClientSecurityParameters();
+		tlsTools.activateCurrentClientSecurityParameters();
 		short plainOffset = RecordTools.writeApplicationData(payloadData, payloadDataOffset, payloadDataLength, recordData, recordDataOffset);
 		short offset = wrapRecordData(recordData, recordDataOffset, (short) (plainOffset - recordDataOffset));
 		return (short) (offset - recordDataOffset);

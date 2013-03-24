@@ -17,6 +17,7 @@
 
 package de.opentlssc.tls;
 
+import javacard.framework.JCSystem;
 import javacard.framework.Util;
 import javacard.security.MessageDigest;
 
@@ -29,9 +30,14 @@ import javacard.security.MessageDigest;
  */
 class Crypto_Prf {
 	private Crypto_HMAC hmac = new Crypto_HMAC(MessageDigest.ALG_SHA_256);
-	
+	private byte [] workspace;
 	
 	Crypto_Prf(){
+		if (LibraryConfiguration.CONFIG_TRANSIENT_PRF){
+			workspace = JCSystem.makeTransientByteArray(hmac.getLength(), JCSystem.CLEAR_ON_DESELECT);
+		} else {
+			workspace = new byte [hmac.getLength()];
+		}
 	}
 	
 	/**
@@ -64,24 +70,23 @@ class Crypto_Prf {
 
 
 		short destinationPointer = destOff;
-		byte [] tempSpace = TransientTools.getWorkspace(this, false);
 		for (short i = 0; i < iterations; i++){
 			if (i == 0){
 				// if first run of loop, create A(1), A(0) being the seed
 				hmac.init(secret, secretOff, secretLen);
 				hmac.update(label, labelOff, labelLen);
-				hmac.doFinal(seed, seedOff, seedLen, tempSpace, Constants.ZERO);
+				hmac.doFinal(seed, seedOff, seedLen, workspace, Constants.ZERO);
 			} else {
 				// else create A(i-1)
 				hmac.init(secret, secretOff, secretLen);
-				hmac.doFinal(tempSpace, Constants.ZERO, hmac.getLength(), tempSpace, Constants.ZERO);
+				hmac.doFinal(workspace, Constants.ZERO, hmac.getLength(), workspace, Constants.ZERO);
 			}
 			
 			
 			if (i < (short)(iterations - 1) || (i == (short)(iterations - 1) && rest == 0)) {
 				// create the pseudo random bytes by calculating HMAC(secret, A(i) + seed) and store in destination
 				hmac.init(secret, secretOff, secretLen);
-				hmac.update(tempSpace, Constants.ZERO, hmac.getLength());
+				hmac.update(workspace, Constants.ZERO, hmac.getLength());
 				hmac.update(label, labelOff, labelLen);
 				hmac.doFinal(seed, seedOff, seedLen, dest, destinationPointer);
 				destinationPointer += hmac.getLength();
@@ -90,13 +95,12 @@ class Crypto_Prf {
 				// create the pseudo random bytes by calculating HMAC(secret, A(i) + seed)
 				// and store in workspace to copy only the needed bytes into destination
 				hmac.init(secret, secretOff, secretLen);
-				hmac.update(tempSpace, Constants.ZERO, hmac.getLength());
+				hmac.update(workspace, Constants.ZERO, hmac.getLength());
 				hmac.update(label,labelOff, labelLen);
-				hmac.doFinal(seed, seedOff, seedLen, tempSpace, Constants.ZERO);
-				Util.arrayCopyNonAtomic(tempSpace, Constants.ZERO, dest, destinationPointer, rest);
+				hmac.doFinal(seed, seedOff, seedLen, workspace, Constants.ZERO);
+				Util.arrayCopyNonAtomic(workspace, Constants.ZERO, dest, destinationPointer, rest);
 			}
 		}
-		TransientTools.freeWorkspace(tempSpace);
 	
 	}
 	

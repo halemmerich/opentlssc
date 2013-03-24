@@ -26,18 +26,19 @@ import javacard.security.RandomData;
  * @author Martin Boonk
  *
  */
-class CryptoTools extends StaticTool {
+class CryptoTools{
 
-	static RandomData				random;
-	private static byte [] randomNumberWorkspace;
+	RandomData				random;
+	private byte [] randomNumberWorkspace;
+	private TLS tls;
 	
-	static void init(){
-		
+	CryptoTools(TLS tls){
 		if (LibraryConfiguration.emu) {
 			random = RandomData.getInstance(RandomData.ALG_PSEUDO_RANDOM);
 		} else {
 			random = RandomData.getInstance(RandomData.ALG_SECURE_RANDOM);
 		}
+		this.tls = tls;
 	}
 	
 	/**
@@ -47,16 +48,16 @@ class CryptoTools extends StaticTool {
 	 * @param to (inclusive)
 	 * @return
 	 */
-	static short getRandomNumber(short from, short to) {		
+	short getRandomNumber(short from, short to) {		
 		random.generateData(randomNumberWorkspace, Constants.ZERO, (short)randomNumberWorkspace.length);
 		return (short) ((short) ((short) ((short)(randomNumberWorkspace[0] + 128) & 0xFF) % (short) (to + 1 - from)) + from);
 	}
 
-	static void generateRandom(ArrayPointer dest) {
+	void generateRandom(ArrayPointer dest) {
 		random.generateData(dest.data, dest.offset, dest.length);
 	}
 
-	static void generateRandom(byte [] destination, short destinationOffset, short length) {
+	void generateRandom(byte [] destination, short destinationOffset, short length) {
 		random.generateData(destination, destinationOffset, length);
 	}
 	
@@ -101,7 +102,7 @@ class CryptoTools extends StaticTool {
 	 * @return
 	 */
 	
-	static RSAPublicKey parse(byte [] publicKey, short offset){
+	RSAPublicKey parse(byte [] publicKey, short offset){
 
 		short offsetModulusStructure = ASN1Tools.jumpInto(publicKey, offset);		
 		short offsetEponentStructure = ASN1Tools.jumpOver(publicKey, offsetModulusStructure);
@@ -123,7 +124,7 @@ class CryptoTools extends StaticTool {
 		
 		
 		//TODO intelligent solution for key management
-		RSAPublicKey key = TlsTools.getPublicKeyForSize((short) (modLength * 8));
+		RSAPublicKey key = tls.getTlsTools().getPublicKeyForSize((short) (modLength * 8));
 		key.setModulus(publicKey, modOffset, modLength);
 		key.setExponent(publicKey, expOffset, expLength);
 		return key;

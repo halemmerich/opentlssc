@@ -35,28 +35,8 @@ class ArrayPointer extends DataElement {
 		return (short) (relativeOffset + offset);
 	}
 
-	void set(byte data, short offset) {
-		this.data[offset] = data;
-	}
-
 	void set(byte data) {
 		this.data[offset] = data;
-	}
-
-	void set(short data, short offset) {
-		Util.setShort(this.data, (short) (this.offset + offset), data);
-	}
-
-	void set(short data) {
-		Util.setShort(this.data, (short) (this.offset), data);
-	}
-
-	void set(ArrayPointer source, short offset){
-		set(source.data, source.offset, offset, source.length);
-	}
-	
-	void set(byte[] src, short srcOff, short offset, short length) {
-		Util.arrayCopyNonAtomic(src, srcOff, this.data, (short) (this.offset + offset), length);
 	}
 
 	void set(byte[] src, short srcOff) {
@@ -66,25 +46,5 @@ class ArrayPointer extends DataElement {
 	short copy(byte[] dest, short destOff) {
 		Util.arrayCopyNonAtomic(data, offset, dest, destOff, length);
 		return length;
-	}
-
-	byte compare(byte[] data, short offset, short length) {
-		return Util.arrayCompare(this.data, this.offset, data, offset, length);
-	}
-
-	byte compare(byte[] data, short offset) {
-		return Util.arrayCompare(this.data, this.offset, data, offset, this.length);
-	}
-
-	void fill() {
-		Util.arrayFillNonAtomic(data, offset, length, (byte) 0x00);
-	}
-
-	byte getByte() {
-		return data[offset];
-	}
-
-	short getShort() {
-		return Util.getShort(data, offset);
 	}
 }

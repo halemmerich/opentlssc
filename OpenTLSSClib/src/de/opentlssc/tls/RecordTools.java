@@ -22,14 +22,20 @@ import javacard.framework.ISOException;
 import javacard.framework.Util;
 
 class RecordTools{
+	
+	TLS tls;
+	
+	public RecordTools(TLS tls) {
+		this.tls = tls;
+	}
 
-	static void parseAlert(byte[] buffer, short offset, short length) {
+	void parseAlert(byte[] buffer, short offset, short length) {
 		checkHandshake(buffer, offset, length);
 	}
 
-	static void parseFinished(byte[] buffer, short offset, short length) {
+	void parseFinished(byte[] buffer, short offset, short length) {
 		checkHandshake(buffer, offset, length);
-		TlsTools.handshakeHashUpdate(buffer, (short) (offset + Constants.LENGTH_TLS_RECORD_HEADER), (short) (length - Constants.LENGTH_TLS_RECORD_HEADER));
+		tls.getTlsTools().handshakeHashUpdate(buffer, (short) (offset + Constants.LENGTH_TLS_RECORD_HEADER), (short) (length - Constants.LENGTH_TLS_RECORD_HEADER));
 		checkFinishedValue(buffer, offset);
 	}
 
@@ -39,9 +45,9 @@ class RecordTools{
 		}
 	}
 
-	static void parseServerHelloDone(byte[] buffer, short offset, short length) {
+	void parseServerHelloDone(byte[] buffer, short offset, short length) {
 		checkHandshake(buffer, offset, length);
-		TlsTools.handshakeHashUpdate(buffer, (short) (offset + Constants.LENGTH_TLS_RECORD_HEADER), (short) (length - Constants.LENGTH_TLS_RECORD_HEADER));
+		tls.getTlsTools().handshakeHashUpdate(buffer, (short) (offset + Constants.LENGTH_TLS_RECORD_HEADER), (short) (length - Constants.LENGTH_TLS_RECORD_HEADER));
 	}
 
 	static void parseChangeCipherSpec(byte[] buffer, short offset, short length) {
@@ -50,11 +56,11 @@ class RecordTools{
 		}
 	}
 	
-	static void parseServerHello(byte[] buffer, short offset, short length){
+	void parseServerHello(byte[] buffer, short offset, short length){
 		checkHandshake(buffer, offset, length);
-		TlsTools.handshakeHashUpdate(buffer, (short) (offset + Constants.LENGTH_TLS_RECORD_HEADER), (short) (length - Constants.LENGTH_TLS_RECORD_HEADER));
+		tls.getTlsTools().handshakeHashUpdate(buffer, (short) (offset + Constants.LENGTH_TLS_RECORD_HEADER), (short) (length - Constants.LENGTH_TLS_RECORD_HEADER));
 		offset += Constants.LENGTH_TLS_RECORD_HEADER + Constants.LENGTH_TLS_HANDSHAKE_HEADER + 2;
-		TlsTools.getNextClientSecurityParameters().serverRandomBytes.set(buffer, offset);
+		tls.getTlsTools().getNextClientSecurityParameters().serverRandomBytes.set(buffer, offset);
 		offset += Constants.LENGTH_RANDOM_BYTES;
 		
 		short serverSessionIdLength = (short) (buffer[offset] & 0xFF);
@@ -66,34 +72,34 @@ class RecordTools{
 			Data.sessionId.set(buffer, offset);
 		}
 		offset += Data.sessionId.length;
-		TlsTools.getNextClientSecurityParameters().cipherSuite = Util.getShort(buffer, offset);
+		tls.getTlsTools().getNextClientSecurityParameters().cipherSuite = Util.getShort(buffer, offset);
 	}
 
-	static void parseCertificate(byte[] buffer, short offset, short length) {
+	void parseCertificate(byte[] buffer, short offset, short length) {
 		checkHandshake(buffer, offset, length);
-		TlsTools.handshakeHashUpdate(buffer, (short) (offset + Constants.LENGTH_TLS_RECORD_HEADER), (short) (length - Constants.LENGTH_TLS_RECORD_HEADER));
+		tls.getTlsTools().handshakeHashUpdate(buffer, (short) (offset + Constants.LENGTH_TLS_RECORD_HEADER), (short) (length - Constants.LENGTH_TLS_RECORD_HEADER));
 		
 		// get length of first certificate
 		Data.serverCertificate.length = Util.getShort(buffer, (short) (offset
 				+ Constants.OFFSET_TLS_CERTIFICATE_LENGTH_IN_RECORD + 1));
 		offset += Constants.OFFSET_TLS_CERTIFICATE_DATA_IN_RECORD;
 		length -= Constants.OFFSET_TLS_CERTIFICATE_DATA_IN_RECORD;
-		TlsTools.createPublicKeyFromCertificate(buffer, offset);
+		tls.getTlsTools().createPublicKeyFromCertificate(buffer, offset);
 	}
 	
 	static void parseApplicationData(byte [] recordData, short recordDataOffset, short recordDataLength, byte [] destination, short destinationOffset){
 		Util.arrayCopyNonAtomic(recordData, (short) (recordDataOffset + Constants.LENGTH_TLS_RECORD_HEADER), destination, destinationOffset, (short) (recordDataLength + Constants.LENGTH_TLS_RECORD_HEADER));
 	}
 	
-	static short writeAlert(byte [] recordData, short recordDataOffset) {
+	short writeAlert(byte [] recordData, short recordDataOffset) {
 		recordDataOffset = writeRecordHeader(Constants.TLS_RECORD_CONTENT_TYPE_HANDSHAKE_VALUE, recordData, recordDataOffset);
-		recordDataOffset = Util.setShort(recordData, recordDataOffset, TlsTools.getCurrentClientSecurityParameters().alert);
+		recordDataOffset = Util.setShort(recordData, recordDataOffset, tls.getTlsTools().getCurrentClientSecurityParameters().alert);
 		writeRecordHeaderLength((short) 2, recordData, recordDataOffset);
 		return recordDataOffset;
 	}
 
-	static short writeClientHello(byte [] recordData, short recordDataOffset){
-		TlsTools.generateClientRandomBytes();
+	short writeClientHello(byte [] recordData, short recordDataOffset){
+		tls.getTlsTools().generateClientRandomBytes();
 		short initialOffset = recordDataOffset;
 		
 		recordDataOffset = writeRecordHeader(Constants.TLS_RECORD_CONTENT_TYPE_HANDSHAKE_VALUE, recordData, recordDataOffset);
@@ -101,7 +107,7 @@ class RecordTools{
 		
 		short recordContentOffset = recordDataOffset; 
 		recordDataOffset = Util.setShort(recordData, recordDataOffset, Constants.TLS_VERSION);
-		recordDataOffset += TlsTools.getNextClientSecurityParameters().clientRandomBytes.copy(recordData, recordDataOffset);
+		recordDataOffset += tls.getTlsTools().getNextClientSecurityParameters().clientRandomBytes.copy(recordData, recordDataOffset);
 		recordData[recordDataOffset ++] = (byte) Data.sessionId.length;
 		recordDataOffset += Data.sessionId.copy(recordData, recordDataOffset);
 		
@@ -155,45 +161,45 @@ class RecordTools{
 		writeRecordHeaderLength((short) (length + Constants.LENGTH_TLS_HANDSHAKE_HEADER), recordData, initialOffset);
 		writeHandshakeHeaderLength(length, recordData, initialOffset);
 		
-		TlsTools.handshakeHashUpdate(recordData, (short) (initialOffset + Constants.LENGTH_TLS_RECORD_HEADER), (short) (length + Constants.LENGTH_TLS_HANDSHAKE_HEADER));
+		tls.getTlsTools().handshakeHashUpdate(recordData, (short) (initialOffset + Constants.LENGTH_TLS_RECORD_HEADER), (short) (length + Constants.LENGTH_TLS_HANDSHAKE_HEADER));
 		return recordDataOffset;
 	}
 	
-	static short writeClientKeyExchange(byte [] recordData, short recordDataOffset){
+	short writeClientKeyExchange(byte [] recordData, short recordDataOffset){
 		short initialOffset = recordDataOffset;
 		
 		recordDataOffset = writeRecordHeader(Constants.TLS_RECORD_CONTENT_TYPE_HANDSHAKE_VALUE, recordData, recordDataOffset);
 		recordDataOffset = writeHandshakeHeader(Constants.TLS_HANDSHAKE_CONTENT_TYPE_CLIENT_KEY_EXCHANGE, recordData, recordDataOffset);
 
-		short length = TlsTools.encryptPreMasterSecret(recordData, (short) (recordDataOffset + Constants.LENGTH_ENCRYPTED_PRE_MASTER_SECRET_LENGTH));
+		short length = tls.getTlsTools().encryptPreMasterSecret(recordData, (short) (recordDataOffset + Constants.LENGTH_ENCRYPTED_PRE_MASTER_SECRET_LENGTH));
 		Util.setShort(recordData, recordDataOffset, length);
 		length += Constants.LENGTH_ENCRYPTED_PRE_MASTER_SECRET_LENGTH;
 		recordDataOffset += length;
 		writeRecordHeaderLength((short) (length + Constants.LENGTH_TLS_HANDSHAKE_HEADER), recordData, initialOffset);
 		writeHandshakeHeaderLength(length, recordData, initialOffset);
 		
-		TlsTools.handshakeHashUpdate(recordData, (short) (initialOffset + Constants.LENGTH_TLS_RECORD_HEADER), (short) (length + Constants.LENGTH_TLS_HANDSHAKE_HEADER));
+		tls.getTlsTools().handshakeHashUpdate(recordData, (short) (initialOffset + Constants.LENGTH_TLS_RECORD_HEADER), (short) (length + Constants.LENGTH_TLS_HANDSHAKE_HEADER));
 		return recordDataOffset;
 	}
 
-	static short writeChangeCipherSpec(byte [] recordData, short recordDataOffset) {
+	short writeChangeCipherSpec(byte [] recordData, short recordDataOffset) {
 		short initialOffset = recordDataOffset;
 		recordDataOffset = writeRecordHeader(Constants.TLS_RECORD_CONTENT_TYPE_CHANGE_CIPHER_SPEC_VALUE, recordData, recordDataOffset);
 		recordData[recordDataOffset] = 0x01;
 		writeRecordHeaderLength((short) (1), recordData, initialOffset);
 		
-		TlsTools.handshakeHashFinishClient(TlsTools.getNextClientSecurityParameters());
+		tls.getTlsTools().handshakeHashFinishClient(tls.getTlsTools().getNextClientSecurityParameters());
 		return (short) (recordDataOffset + 1);
 	}
 
-	static short writeFinished(byte [] recordData, short recordDataOffset) {
+	short writeFinished(byte [] recordData, short recordDataOffset) {
 		short initialOffset = recordDataOffset;
 		recordDataOffset = writeRecordHeader(Constants.TLS_RECORD_CONTENT_TYPE_HANDSHAKE_VALUE, recordData, recordDataOffset);
 		recordDataOffset = writeHandshakeHeader(Constants.TLS_HANDSHAKE_CONTENT_TYPE_FINISHED, recordData, recordDataOffset);
 		short length = Data.verifyData.copy(recordData, recordDataOffset);
 		writeRecordHeaderLength((short) (length + Constants.LENGTH_TLS_HANDSHAKE_HEADER), recordData, initialOffset);
 		writeHandshakeHeaderLength(length, recordData, initialOffset);
-		TlsTools.handshakeHashUpdate(recordData, (short) (initialOffset + Constants.LENGTH_TLS_RECORD_HEADER), (short) (length + Constants.LENGTH_TLS_HANDSHAKE_HEADER));
+		tls.getTlsTools().handshakeHashUpdate(recordData, (short) (initialOffset + Constants.LENGTH_TLS_RECORD_HEADER), (short) (length + Constants.LENGTH_TLS_HANDSHAKE_HEADER));
 		return (short) (recordDataOffset + length);
 	}
 	

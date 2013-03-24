@@ -19,7 +19,7 @@ package de.opentlssc.tls;
 
 import javacard.framework.Util;
 
-class Data extends StaticTool{
+class Data{
 	static byte[]						DATA;
 
 	static ArrayPointer	cipherSuites;

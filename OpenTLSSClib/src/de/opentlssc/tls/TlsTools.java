@@ -26,57 +26,53 @@ import javacard.security.MessageDigest;
 import javacard.security.RSAPublicKey;
 import javacardx.crypto.Cipher;
 
-class TlsTools extends StaticTool {
+class TlsTools {
 
-	static short LENGTH_PAYLOAD_BLOCKSIZE = 16;
+	short LENGTH_PAYLOAD_BLOCKSIZE = 16;
 
-	// static WorkerPayloadProtection protectedReceiveWorker;
+	Crypto_HMAC payloadMac; // hmac
+	Cipher payloadCipher; // bulk
+	Key payloadKey;
+	PrimitiveShort sendSequenceCounter;
+	ArrayPointer keyMac;
+	RSAPublicKey serverPublicKey; // key
+	Crypto_Prf prf;
 
-	static Crypto_HMAC payloadMac; // hmac
-	static Cipher payloadCipher; // bulk
-	static Key payloadKey;
-	static PrimitiveShort sendSequenceCounter;
-	static ArrayPointer keyMac;
-	static RSAPublicKey serverPublicKey; // key
-	static Crypto_Prf prf;
-
-	// private static WorkerPayloadNullCipherProtection nullCipherWorker;
-	// private static WorkerPayloadGenericBlockCipherProtection
-	// blockCipherWorker;
-
-	private static TlsSecurityParameters[] securityParameters;
-	private static byte currentClientSecurityParametersPointer = 0;
-	private static byte currentServerSecurityParametersPointer = 0;
+	private TlsSecurityParameters[] securityParameters;
+	private byte currentClientSecurityParametersPointer = 0;
+	private byte currentServerSecurityParametersPointer = 0;
 
 	// statefull cipher objects for payload protection
-	private static Cipher cipherAes;
-	private static Cipher cipher3Des;
+	private Cipher cipherAes;
+	private Cipher cipher3Des;
 
-	private static AESKey keyAes128;
-	private static DESKey key3Des;
-	private static AESKey keyAes256;
+	private AESKey keyAes128;
+	private DESKey key3Des;
+	private AESKey keyAes256;
 
-	private static Crypto_HMAC hmacSha;
-	private static Crypto_HMAC hmacMd5;
-	private static Crypto_HMAC hmacSha256;
+	private Crypto_HMAC hmacSha;
+	private Crypto_HMAC hmacMd5;
+	private Crypto_HMAC hmacSha256;
 
-	private static RSAPublicKey				serverPublicKey512;
-	private static RSAPublicKey				serverPublicKey1024;
-	private static RSAPublicKey				serverPublicKey2048;
+	private RSAPublicKey				serverPublicKey512;
+	private RSAPublicKey				serverPublicKey1024;
+	private RSAPublicKey				serverPublicKey2048;
 	
 	// exchange
-	private static Cipher rsa;
+	private Cipher rsa;
 
-	private static MessageDigest digestForFinishedClient;
-	private static MessageDigest digestForFinishedServer;
+	private MessageDigest digestForFinishedClient;
+	private MessageDigest digestForFinishedServer;
 
-	static short numberOfCipherSuites = 0;
-	private static Object identifier;
+	short numberOfCipherSuites = 0;
+	private Object identifier;
 
-	static boolean clientHashActive = true;
-	static boolean serverHashActive = true;
+	boolean clientHashActive = true;
+	boolean serverHashActive = true;
 
-	static void init() {
+	TLS tls;
+	
+	TlsTools(TLS tls) {
 		identifier = new Object();
 
 		// algorithm for key exchange encryption
@@ -137,10 +133,11 @@ class TlsTools extends StaticTool {
 			serverPublicKey2048 = (RSAPublicKey) KeyBuilder.buildKey(KeyBuilder.TYPE_RSA_PUBLIC, KeyBuilder.LENGTH_RSA_2048, false);
 		}
 		
+		this.tls = tls;
 		reset();
 	}
 
-	static void reset() {
+	void reset() {
 		digestForFinishedClient.reset();
 		digestForFinishedServer.reset();
 
@@ -160,14 +157,14 @@ class TlsTools extends StaticTool {
 		}
 	}
 
-	static void handshakeHashInit() {
+	void handshakeHashInit() {
 		digestForFinishedClient.reset();
 		digestForFinishedServer.reset();
 		serverHashActive = true;
 		clientHashActive = true;
 	}
 
-	static void handshakeHashUpdate(byte[] buffer, short offset, short length) {
+	void handshakeHashUpdate(byte[] buffer, short offset, short length) {
 		if (clientHashActive) {
 			digestForFinishedClient.update(buffer, offset, length);
 		}
@@ -176,51 +173,49 @@ class TlsTools extends StaticTool {
 		}
 	}
 
-	static void handshakeHashFinishClient(TlsSecurityParameters state) {
-		byte[] dest = TransientTools.getWorkspace(identifier, false);
+	void handshakeHashFinishClient(TlsSecurityParameters state) {
+		byte[] dest = tls.getTransientTools().getWorkspace(identifier, false);
 		digestForFinishedClient.doFinal(dest, (short) 0, (short) 0, dest,
 				Constants.ZERO);
 		computeVerifyData(state, dest, Constants.ZERO);
-		TransientTools.freeWorkspace(dest);
+		tls.getTransientTools().freeWorkspace(dest);
 	}
 
-	static void handshakeHashFinishServer(TlsSecurityParameters state) {
-		byte[] dest = TransientTools.getWorkspace(identifier, false);
+	void handshakeHashFinishServer(TlsSecurityParameters state) {
+		byte[] dest = tls.getTransientTools().getWorkspace(identifier, false);
 		digestForFinishedServer.doFinal(dest, (short) 0, (short) 0, dest,
 				Constants.ZERO);
 		computeVerifyData(state, dest, Constants.ZERO);
-		TransientTools.freeWorkspace(dest);
+		tls.getTransientTools().freeWorkspace(dest);
 	}
 
-	private static void generatePreMasterSecret(byte[] workspace, short offset) {
-		CryptoTools.random.generateData(workspace, (short) (offset + 2),
+	private void generatePreMasterSecret(byte[] workspace, short offset) {
+		tls.getCryptoTools().random.generateData(workspace, (short) (offset + 2),
 				(short) (Constants.LENGTH_PRE_MASTER_SECRET - 2));
 		Util.setShort(workspace, offset, Constants.TLS_VERSION);
 	}
 
-	static void generateClientRandomBytes() {
-		CryptoTools
-				.generateRandom(getNextClientSecurityParameters().clientRandomBytes);
+	void generateClientRandomBytes() {
+		tls.getCryptoTools().generateRandom(getNextClientSecurityParameters().clientRandomBytes);
 	}
 
-	static short encryptPreMasterSecret(byte[] destination, short offset) {
+	short encryptPreMasterSecret(byte[] destination, short offset) {
 		rsa.init(serverPublicKey, Cipher.MODE_ENCRYPT);
 
-		byte[] premasterSecret = TransientTools.getWorkspace(
-				TlsTools.identifier, false);
+		byte[] premasterSecret = tls.getTransientTools().getWorkspace(
+				this, false);
 		generatePreMasterSecret(premasterSecret, Constants.ZERO);
 		short length = rsa.doFinal(premasterSecret, Constants.ZERO,
 				Constants.LENGTH_PRE_MASTER_SECRET, destination, offset);
 		generateMasterSecret(getNextClientSecurityParameters(),
 				premasterSecret, Constants.ZERO);
-		TransientTools.freeWorkspace(premasterSecret);
+		tls.getTransientTools().freeWorkspace(premasterSecret);
 		return length;
 	}
 
-	static void createPublicKeyFromCertificate(byte [] certificateData, short certificateDataOffset) {
-		serverPublicKey = CryptoTools.parse(certificateData,
-				CryptoTools.findPublicKeyOffset(certificateData,
-						certificateDataOffset));
+	void createPublicKeyFromCertificate(byte [] certificateData, short certificateDataOffset) {
+		short publicKeyOffset = CryptoTools.findPublicKeyOffset(certificateData, certificateDataOffset);
+		serverPublicKey = tls.getCryptoTools().parse(certificateData, publicKeyOffset);
 	}
 	
 	/**
@@ -229,16 +224,16 @@ class TlsTools extends StaticTool {
 	 * 
 	 * @param state
 	 */
-	static void makeNextSecurityParametersCurrentForServer() {
+	void makeNextSecurityParametersCurrentForServer() {
 		currentServerSecurityParametersPointer = (byte) ((currentServerSecurityParametersPointer + 1) % securityParameters.length);
 		securityParameters[currentServerSecurityParametersPointer].serverSequenceNumber.value = 0;
 	}
-	static void makeNextSecurityParametersCurrentForClient() {
+	void makeNextSecurityParametersCurrentForClient() {
 		currentClientSecurityParametersPointer = (byte) ((currentClientSecurityParametersPointer + 1) % securityParameters.length);
 		securityParameters[currentClientSecurityParametersPointer].clientSequenceNumber.value = 0;
 	}
 	
-	private static void setCryptoObjects(short cipherSuite){
+	private void setCryptoObjects(short cipherSuite){
 		switch (cipherSuite) {
 		case Constants.TLS_CIPHER_SUITE_NULL_WITH_NULL_NULL:
 			payloadCipher = null;
@@ -294,7 +289,7 @@ class TlsTools extends StaticTool {
 		}
 	}
 
-	private static void activateClientConnectionState(TlsSecurityParameters state) {
+	private void activateClientConnectionState(TlsSecurityParameters state) {
 		setCryptoObjects(state.cipherSuite);
 
 		if (payloadKey != null) {
@@ -318,7 +313,7 @@ class TlsTools extends StaticTool {
 		}
 	}
 
-	private static void activateServerConnectionState(TlsSecurityParameters state) {
+	private void activateServerConnectionState(TlsSecurityParameters state) {
 		setCryptoObjects(state.cipherSuite);
 		
 		if (payloadKey != null) {
@@ -342,33 +337,33 @@ class TlsTools extends StaticTool {
 		}
 	}
 
-	static void activateCurrentClientSecurityParameters(){
+	void activateCurrentClientSecurityParameters(){
 		activateClientConnectionState(securityParameters[currentClientSecurityParametersPointer]);
 	}
 
-	static void activateNextClientSecurityParameters(){
+	void activateNextClientSecurityParameters(){
 		activateClientConnectionState(securityParameters[(currentClientSecurityParametersPointer + 1) % securityParameters.length]);
 	}
 
-	static void activateCurrentServerSecurityParameters(){
+	void activateCurrentServerSecurityParameters(){
 		activateServerConnectionState(securityParameters[currentServerSecurityParametersPointer]);
 	}
 
-	static void activateNextServerSecurityParameters(){
+	void activateNextServerSecurityParameters(){
 		activateServerConnectionState(securityParameters[(currentServerSecurityParametersPointer + 1) % securityParameters.length]);
 	}
 	
-	static TlsSecurityParameters getNextClientSecurityParameters() {
+	TlsSecurityParameters getNextClientSecurityParameters() {
 		return securityParameters[(currentClientSecurityParametersPointer + 1)
 				% securityParameters.length];
 	}
 
-	static TlsSecurityParameters getCurrentClientSecurityParameters() {
+	TlsSecurityParameters getCurrentClientSecurityParameters() {
 		return securityParameters[currentClientSecurityParametersPointer];
 	}
 
-	static void generateKeyBlock(TlsSecurityParameters state) {
-		byte[] workspace = TransientTools.getWorkspace(identifier, false);
+	void generateKeyBlock(TlsSecurityParameters state) {
+		byte[] workspace = tls.getTransientTools().getWorkspace(identifier, false);
 		Util.arrayCopyNonAtomic(state.serverRandomBytes.data,
 				state.serverRandomBytes.offset, workspace, Constants.ZERO,
 				Constants.LENGTH_RANDOM_BYTES);
@@ -380,12 +375,12 @@ class TlsTools extends StaticTool {
 				Constants.labelKeyExpansion, workspace, Constants.ZERO,
 				(short) (Constants.LENGTH_RANDOM_BYTES * 2),
 				state.keyBlock.length);
-		TransientTools.freeWorkspace(workspace);
+		tls.getTransientTools().freeWorkspace(workspace);
 	}
 
-	static void generateMasterSecret(TlsSecurityParameters state,
+	void generateMasterSecret(TlsSecurityParameters state,
 			byte[] preMasterSecret, short offset) {
-		byte[] workspace = TransientTools.getWorkspace(identifier, false);
+		byte[] workspace = tls.getTransientTools().getWorkspace(identifier, false);
 		Util.arrayCopyNonAtomic(state.clientRandomBytes.data,
 				state.clientRandomBytes.offset, workspace, Constants.ZERO,
 				Constants.LENGTH_RANDOM_BYTES);
@@ -396,22 +391,22 @@ class TlsTools extends StaticTool {
 				Constants.LENGTH_PRE_MASTER_SECRET,
 				Constants.labelMasterSecret, workspace, Constants.ZERO,
 				(short) (Constants.LENGTH_RANDOM_BYTES * 2), (short) 48);
-		TransientTools.freeWorkspace(workspace);
+		tls.getTransientTools().freeWorkspace(workspace);
 	}
 
-	static void computeVerifyData(TlsSecurityParameters state,
+	void computeVerifyData(TlsSecurityParameters state,
 			byte[] handshakeHash, short offset) {
 		prf.expand(Data.verifyData, state.masterSecret,
 				Constants.labelClientFinished, handshakeHash, offset,
 				digestForFinishedClient.getLength(), Data.verifyData.length);
 	}
 
-	public static void copyMasterSecretToNextSecurityParameters() {
+	public void copyMasterSecretToNextSecurityParameters() {
 		securityParameters[currentClientSecurityParametersPointer].masterSecret.copy(getNextClientSecurityParameters().masterSecret.data, getCurrentClientSecurityParameters().masterSecret.offset);
 	}
 
 	
-	static RSAPublicKey getPublicKeyForSize(short size){
+	RSAPublicKey getPublicKeyForSize(short size){
 		switch(size){
 			case KeyBuilder.LENGTH_RSA_512:
 				return serverPublicKey512;

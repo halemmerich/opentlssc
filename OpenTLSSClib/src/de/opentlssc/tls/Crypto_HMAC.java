@@ -17,6 +17,7 @@
 
 package de.opentlssc.tls;
 
+import javacard.framework.JCSystem;
 import javacard.framework.Util;
 import javacard.security.MessageDigest;
 
@@ -33,10 +34,9 @@ class Crypto_HMAC{
 	static final byte	HMAC_INNER_PADDING_VALUE	= (byte) 0x36;
 	
 	final MessageDigest digest;
-	
-	private byte [] secret;
-	private short secretOff;
-	private short secretLen;
+
+	byte [] outgoingSecret;
+	byte [] finalWorkspace;
 	
 	/**
 	 * Create an instance of the HMAC using the specified algorithm.
@@ -54,6 +54,13 @@ class Crypto_HMAC{
 		default:
 			LENGTH_HMAC_HASH_BLOCKSIZE = 64;
 		}
+		if (LibraryConfiguration.CONFIG_TRANSIENT_HMAC){
+			outgoingSecret = JCSystem.makeTransientByteArray(LENGTH_HMAC_HASH_BLOCKSIZE, JCSystem.CLEAR_ON_DESELECT);
+			finalWorkspace = JCSystem.makeTransientByteArray(digest.getLength(), JCSystem.CLEAR_ON_DESELECT);
+		} else {
+			outgoingSecret = new byte [LENGTH_HMAC_HASH_BLOCKSIZE];
+			finalWorkspace = new byte [digest.getLength()];
+		}
 	}
 
 	/**
@@ -64,17 +71,10 @@ class Crypto_HMAC{
 	 * @param secretLen
 	 */
 	void init(byte [] secret, short secretOff, short secretLen){
-		this.secret = secret;
-		this.secretOff = secretOff;
-		this.secretLen = secretLen;
 		digest.reset();
-		byte [] workspace = TransientTools.getWorkspace(this, false);
-		prepareKey(workspace, Constants.ZERO, HMAC_INNER_PADDING_VALUE);
-		
-		
-		digest.update(workspace, (short) 0, (short) LENGTH_HMAC_HASH_BLOCKSIZE);
-
-		TransientTools.freeWorkspace(workspace);
+		prepareKey(secret, secretOff, secretLen, outgoingSecret, Constants.ZERO, HMAC_INNER_PADDING_VALUE);
+		digest.update(outgoingSecret, (short) 0, (short) LENGTH_HMAC_HASH_BLOCKSIZE);
+		prepareKey(secret, secretOff, secretLen, outgoingSecret, Constants.ZERO, HMAC_OUTER_PADDING_VALUE);
 	}
 	
 	void init(ArrayPointer secret) {
@@ -86,7 +86,7 @@ class Crypto_HMAC{
 	 * 
 	 * @param xorValue
 	 */
-	private void prepareKey(byte [] dest, short offset, byte xorValue){
+	private void prepareKey(byte [] secret, short secretOff, short secretLen, byte [] dest, short offset, byte xorValue){
 		short keylength = 0;
 		if (secretLen > LENGTH_HMAC_HASH_BLOCKSIZE){
 			keylength = digest.doFinal(secret, secretOff, (short) secretLen, dest, offset);
@@ -129,16 +129,9 @@ class Crypto_HMAC{
 	 * @return
 	 */	
 	short doFinal(byte [] data, short inOffset, short length, byte [] dest, short offset){
-		byte [] workspace = TransientTools.getWorkspace(this, false);
-		byte [] workspace2 = TransientTools.getWorkspace(this, false);
-		
-		digest.doFinal(data, inOffset, length, workspace2, Constants.ZERO);
-		prepareKey(workspace, Constants.ZERO, HMAC_OUTER_PADDING_VALUE);
-				
-		digest.update(workspace, (short) 0 , LENGTH_HMAC_HASH_BLOCKSIZE);
-		digest.doFinal(workspace2, Constants.ZERO, getLength(), dest, offset);
-		TransientTools.freeWorkspace(workspace2);
-		TransientTools.freeWorkspace(workspace);
+		digest.doFinal(data, inOffset, length, finalWorkspace, Constants.ZERO);
+		digest.update(outgoingSecret, (short) 0 , LENGTH_HMAC_HASH_BLOCKSIZE);
+		digest.doFinal(finalWorkspace, Constants.ZERO, getLength(), dest, offset);
 		return digest.getLength();
 	}
 	
