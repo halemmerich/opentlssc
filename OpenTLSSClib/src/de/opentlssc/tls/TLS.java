@@ -78,103 +78,114 @@ public class TLS {
 		short initalOutgoingOffset = outgoingRecordDataOffset;
 		try{
 			if (incomingRecordDataLength > 0 && transmissionState == Constants.STATE_TRANSMISSION_RECEIVE && tlsState == Constants.STATE_TLS_HANDSHAKE){
-				recordTools.checkRecord(incomingRecordData, incomingRecordDataOffset, incomingRecordDataLength);
-				tlsTools.activateCurrentServerSecurityParameters();
-				switch (handshakeState) {
-				case Constants.STATE_HANDSHAKE_HELLO:
-					incomingRecordDataLength = unwrapRecordData(incomingRecordData, incomingRecordDataOffset, incomingRecordDataLength);
-					recordTools.parseServerHello(incomingRecordData, incomingRecordDataOffset, incomingRecordDataLength);
-					
-					ArrayPointer currentSessionId = getTlsTools().getCurrentClientSecurityParameters().sessionId;
-					ArrayPointer nextSessionId = getTlsTools().getNextClientSecurityParameters().sessionId;
-					
-					if (abbreviatedHandshake && currentSessionId.length == nextSessionId.length && 0 == Util.arrayCompare(currentSessionId.data, currentSessionId.offset, nextSessionId.data, nextSessionId.offset, currentSessionId.length)){
-						handshakeState = Constants.STATE_HANDSHAKE_CHANGE_CIPHER_SPEC;
-						tlsTools.copyMasterSecretToNextSecurityParameters();
-						tlsTools.generateKeyBlock(tlsTools.getNextClientSecurityParameters());
-					} else {
-						handshakeState = Constants.STATE_HANDSHAKE_CERTIFICATE;
-					}				
-					break;
-				case Constants.STATE_HANDSHAKE_CERTIFICATE:
-					incomingRecordDataLength = unwrapRecordData(incomingRecordData, incomingRecordDataOffset, incomingRecordDataLength);
-					recordTools.parseCertificate(incomingRecordData, incomingRecordDataOffset, incomingRecordDataLength);
-					handshakeState = Constants.STATE_HANDSHAKE_HELLO_DONE;
-					break;
-				case Constants.STATE_HANDSHAKE_HELLO_DONE:
-					incomingRecordDataLength = unwrapRecordData(incomingRecordData, incomingRecordDataOffset, incomingRecordDataLength);
-					recordTools.parseServerHelloDone(incomingRecordData, incomingRecordDataOffset, incomingRecordDataLength);
-					handshakeState = Constants.STATE_HANDSHAKE_KEY_EXCHANGE;
-					transmissionState = Constants.STATE_TRANSMISSION_SEND;
-					break;
-				case Constants.STATE_HANDSHAKE_CHANGE_CIPHER_SPEC:
-					tlsTools.serverHashActive = false;
-					incomingRecordDataLength = unwrapRecordData(incomingRecordData, incomingRecordDataOffset, incomingRecordDataLength);
-					recordTools.parseChangeCipherSpec(incomingRecordData, incomingRecordDataOffset, incomingRecordDataLength);
-					tlsTools.makeNextSecurityParametersCurrentForServer();
-					handshakeState = Constants.STATE_HANDSHAKE_FINISHED;
-					break;
-				case Constants.STATE_HANDSHAKE_FINISHED:
-					incomingRecordDataLength = unwrapRecordData(incomingRecordData, incomingRecordDataOffset, incomingRecordDataLength);
-					recordTools.parseFinished(incomingRecordData, incomingRecordDataOffset, incomingRecordDataLength);
-					if (abbreviatedHandshake){
-						handshakeState = Constants.STATE_HANDSHAKE_CHANGE_CIPHER_SPEC;
-						transmissionState = Constants.STATE_TRANSMISSION_SEND;
-					} else {
-						handshakeState = Constants.STATE_HANDSHAKE_HELLO;
-						transmissionState = Constants.STATE_TRANSMISSION_SEND;
-						tlsState = Constants.STATE_TLS_APPLICATION_DATA;
-					}
-					break;
-				}		
+				incomingRecordDataLength = readRecord(incomingRecordData, incomingRecordDataOffset, incomingRecordDataLength);
 			}
 			if (transmissionState == Constants.STATE_TRANSMISSION_SEND && tlsState == Constants.STATE_TLS_HANDSHAKE){
-				tlsTools.activateCurrentClientSecurityParameters();
-				switch (handshakeState) {
-				case Constants.STATE_HANDSHAKE_HELLO:
-					tlsTools.handshakeHashInit();
-					transmissionState = Constants.STATE_TRANSMISSION_RECEIVE;
-					
-					ArrayPointer sessionId = getTlsTools().getCurrentClientSecurityParameters().sessionId;
-					
-					if (sessionId.length > 0){
-						abbreviatedHandshake = true;
-					} else {
-						abbreviatedHandshake = false;
-					}
-					
-					outgoingRecordDataOffset = recordTools.writeClientHello(outgoingRecordData, outgoingRecordDataOffset);
-					return wrapRecordData(outgoingRecordData, initalOutgoingOffset, (short) (outgoingRecordDataOffset - initalOutgoingOffset));
-				case Constants.STATE_HANDSHAKE_KEY_EXCHANGE:
-					handshakeState = Constants.STATE_HANDSHAKE_CHANGE_CIPHER_SPEC;
-					outgoingRecordDataOffset = recordTools.writeClientKeyExchange(outgoingRecordData, outgoingRecordDataOffset);
-					tlsTools.generateKeyBlock(tlsTools.getNextClientSecurityParameters());
-					return wrapRecordData(outgoingRecordData, initalOutgoingOffset, (short) (outgoingRecordDataOffset - initalOutgoingOffset));
-				case Constants.STATE_HANDSHAKE_CHANGE_CIPHER_SPEC:
-					tlsTools.clientHashActive = false;
-					handshakeState = Constants.STATE_HANDSHAKE_FINISHED;
-					outgoingRecordDataOffset = recordTools.writeChangeCipherSpec(outgoingRecordData, outgoingRecordDataOffset);
-					short offset = wrapRecordData(outgoingRecordData, initalOutgoingOffset, (short) (outgoingRecordDataOffset - initalOutgoingOffset));
-					tlsTools.makeNextSecurityParametersCurrentForClient();
-					return offset;
-				case Constants.STATE_HANDSHAKE_FINISHED:
-					if (abbreviatedHandshake){
-						handshakeState = Constants.STATE_HANDSHAKE_HELLO;
-						transmissionState = Constants.STATE_TRANSMISSION_SEND;
-						tlsState = Constants.STATE_TLS_APPLICATION_DATA;
-					} else {
-						handshakeState = Constants.STATE_HANDSHAKE_CHANGE_CIPHER_SPEC;
-						transmissionState = Constants.STATE_TRANSMISSION_RECEIVE;
-					}
-					outgoingRecordDataOffset = recordTools.writeFinished(outgoingRecordData, outgoingRecordDataOffset);
-	
-					return wrapRecordData(outgoingRecordData, initalOutgoingOffset, (short) (outgoingRecordDataOffset - initalOutgoingOffset));
-				}
+				return writeRecord(outgoingRecordData, outgoingRecordDataOffset);
 			}
 		} catch (Exception e) {
 			RecordTools.writeAlert(outgoingRecordData, initalOutgoingOffset, tlsTools.getCurrentClientSecurityParameters().alert);
 		}
 		return 0;
+	}
+	
+	private short writeRecord(byte [] outgoingRecordData, short outgoingRecordDataOffset){
+		short initalOutgoingOffset = outgoingRecordDataOffset;
+		tlsTools.activateCurrentClientSecurityParameters();
+		switch (handshakeState) {
+		case Constants.STATE_HANDSHAKE_HELLO:
+			tlsTools.handshakeHashInit();
+			transmissionState = Constants.STATE_TRANSMISSION_RECEIVE;
+			
+			ArrayPointer sessionId = getTlsTools().getCurrentClientSecurityParameters().sessionId;
+			
+			if (sessionId.length > 0){
+				abbreviatedHandshake = true;
+			} else {
+				abbreviatedHandshake = false;
+			}
+			
+			outgoingRecordDataOffset = recordTools.writeClientHello(outgoingRecordData, outgoingRecordDataOffset);
+			return wrapRecordData(outgoingRecordData, initalOutgoingOffset, (short) (outgoingRecordDataOffset - initalOutgoingOffset));
+		case Constants.STATE_HANDSHAKE_KEY_EXCHANGE:
+			handshakeState = Constants.STATE_HANDSHAKE_CHANGE_CIPHER_SPEC;
+			outgoingRecordDataOffset = recordTools.writeClientKeyExchange(outgoingRecordData, outgoingRecordDataOffset);
+			tlsTools.generateKeyBlock(tlsTools.getNextClientSecurityParameters());
+			return wrapRecordData(outgoingRecordData, initalOutgoingOffset, (short) (outgoingRecordDataOffset - initalOutgoingOffset));
+		case Constants.STATE_HANDSHAKE_CHANGE_CIPHER_SPEC:
+			tlsTools.clientHashActive = false;
+			handshakeState = Constants.STATE_HANDSHAKE_FINISHED;
+			outgoingRecordDataOffset = recordTools.writeChangeCipherSpec(outgoingRecordData, outgoingRecordDataOffset);
+			short offset = wrapRecordData(outgoingRecordData, initalOutgoingOffset, (short) (outgoingRecordDataOffset - initalOutgoingOffset));
+			tlsTools.makeNextSecurityParametersCurrentForClient();
+			return offset;
+		case Constants.STATE_HANDSHAKE_FINISHED:
+			if (abbreviatedHandshake){
+				handshakeState = Constants.STATE_HANDSHAKE_HELLO;
+				transmissionState = Constants.STATE_TRANSMISSION_SEND;
+				tlsState = Constants.STATE_TLS_APPLICATION_DATA;
+			} else {
+				handshakeState = Constants.STATE_HANDSHAKE_CHANGE_CIPHER_SPEC;
+				transmissionState = Constants.STATE_TRANSMISSION_RECEIVE;
+			}
+			outgoingRecordDataOffset = recordTools.writeFinished(outgoingRecordData, outgoingRecordDataOffset);
+
+			return wrapRecordData(outgoingRecordData, initalOutgoingOffset, (short) (outgoingRecordDataOffset - initalOutgoingOffset));
+		}
+		return 0;
+	}
+	
+	private short readRecord(byte [] incomingRecordData, short incomingRecordDataOffset, short incomingRecordDataLength){
+		recordTools.checkRecord(incomingRecordData, incomingRecordDataOffset, incomingRecordDataLength);
+		tlsTools.activateCurrentServerSecurityParameters();
+		switch (handshakeState) {
+		case Constants.STATE_HANDSHAKE_HELLO:
+			incomingRecordDataLength = unwrapRecordData(incomingRecordData, incomingRecordDataOffset, incomingRecordDataLength);
+			recordTools.parseServerHello(incomingRecordData, incomingRecordDataOffset, incomingRecordDataLength);
+			
+			ArrayPointer currentSessionId = getTlsTools().getCurrentClientSecurityParameters().sessionId;
+			ArrayPointer nextSessionId = getTlsTools().getNextClientSecurityParameters().sessionId;
+			
+			if (abbreviatedHandshake && currentSessionId.length == nextSessionId.length && 0 == Util.arrayCompare(currentSessionId.data, currentSessionId.offset, nextSessionId.data, nextSessionId.offset, currentSessionId.length)){
+				handshakeState = Constants.STATE_HANDSHAKE_CHANGE_CIPHER_SPEC;
+				tlsTools.copyMasterSecretToNextSecurityParameters();
+				tlsTools.generateKeyBlock(tlsTools.getNextClientSecurityParameters());
+			} else {
+				handshakeState = Constants.STATE_HANDSHAKE_CERTIFICATE;
+			}				
+			break;
+		case Constants.STATE_HANDSHAKE_CERTIFICATE:
+			incomingRecordDataLength = unwrapRecordData(incomingRecordData, incomingRecordDataOffset, incomingRecordDataLength);
+			recordTools.parseCertificate(incomingRecordData, incomingRecordDataOffset, incomingRecordDataLength);
+			handshakeState = Constants.STATE_HANDSHAKE_HELLO_DONE;
+			break;
+		case Constants.STATE_HANDSHAKE_HELLO_DONE:
+			incomingRecordDataLength = unwrapRecordData(incomingRecordData, incomingRecordDataOffset, incomingRecordDataLength);
+			recordTools.parseServerHelloDone(incomingRecordData, incomingRecordDataOffset, incomingRecordDataLength);
+			handshakeState = Constants.STATE_HANDSHAKE_KEY_EXCHANGE;
+			transmissionState = Constants.STATE_TRANSMISSION_SEND;
+			break;
+		case Constants.STATE_HANDSHAKE_CHANGE_CIPHER_SPEC:
+			tlsTools.serverHashActive = false;
+			incomingRecordDataLength = unwrapRecordData(incomingRecordData, incomingRecordDataOffset, incomingRecordDataLength);
+			recordTools.parseChangeCipherSpec(incomingRecordData, incomingRecordDataOffset, incomingRecordDataLength);
+			tlsTools.makeNextSecurityParametersCurrentForServer();
+			handshakeState = Constants.STATE_HANDSHAKE_FINISHED;
+			break;
+		case Constants.STATE_HANDSHAKE_FINISHED:
+			incomingRecordDataLength = unwrapRecordData(incomingRecordData, incomingRecordDataOffset, incomingRecordDataLength);
+			recordTools.parseFinished(incomingRecordData, incomingRecordDataOffset, incomingRecordDataLength);
+			if (abbreviatedHandshake){
+				handshakeState = Constants.STATE_HANDSHAKE_CHANGE_CIPHER_SPEC;
+				transmissionState = Constants.STATE_TRANSMISSION_SEND;
+			} else {
+				handshakeState = Constants.STATE_HANDSHAKE_HELLO;
+				transmissionState = Constants.STATE_TRANSMISSION_SEND;
+				tlsState = Constants.STATE_TLS_APPLICATION_DATA;
+			}
+			break;
+		}	
+		return incomingRecordDataLength;
 	}
 
 	private void createMacHeader(byte typeByte, short contentLength){
