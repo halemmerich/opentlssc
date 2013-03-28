@@ -17,11 +17,7 @@
 
 package de.opentlssc.tls;
 
-import javacard.framework.APDUException;
-import javacard.framework.CardRuntimeException;
-import javacard.framework.ISOException;
 import javacard.framework.Util;
-import javacard.security.CryptoException;
 
 class Utilities {
 
@@ -53,26 +49,5 @@ class Utilities {
 			Util.arrayFillNonAtomic(dest, destOff, (short) (length - 2), (byte) 0);
 		}
 		return (short) (destOff + length);
-	}
-
-	private static short analyse(RuntimeException e) {
-		short prefix = 0;
-		if (e instanceof ArrayIndexOutOfBoundsException) {
-			prefix = (short) 0x1000;
-		} else if (e instanceof NullPointerException) {
-			prefix = (short) 0x2000;
-		} else if (e instanceof CardRuntimeException) {
-			prefix = ((CardRuntimeException) e).getReason();
-			if (e instanceof APDUException) {
-				prefix |= 0x3000;
-			} else if (e instanceof CryptoException) {
-				prefix |= 0x4000;
-			}
-		}
-		return prefix;
-	}
-
-	static void analyseException(RuntimeException e) {
-		ISOException.throwIt(analyse(e));
 	}
 }

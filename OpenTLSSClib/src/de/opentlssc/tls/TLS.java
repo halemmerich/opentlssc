@@ -70,7 +70,7 @@ public class TLS {
 	public void initHandshake(){
 		handshakeState = Constants.STATE_HANDSHAKE_HELLO;
 		transmissionState = Constants.STATE_TRANSMISSION_SEND;
-		tlsState = Constants.STATE_APPLET_HANDSHAKE;
+		tlsState = Constants.STATE_TLS_HANDSHAKE;
 	}
 
 	public boolean anotherHandshakeMessageNeeded(){
@@ -79,7 +79,7 @@ public class TLS {
 
 	public short doHandshake(byte [] incomingRecordData, short incomingRecordDataOffset, short incomingRecordDataLength, byte [] outgoingRecordData, short outgoingRecordDataOffset){
 		short initalOutgoingOffset = outgoingRecordDataOffset;
-		if (incomingRecordDataLength > 0 && transmissionState == Constants.STATE_TRANSMISSION_RECEIVE && tlsState == Constants.STATE_APPLET_HANDSHAKE){
+		if (incomingRecordDataLength > 0 && transmissionState == Constants.STATE_TRANSMISSION_RECEIVE && tlsState == Constants.STATE_TLS_HANDSHAKE){
 			RecordTools.checkRecord(incomingRecordData, incomingRecordDataOffset, incomingRecordDataLength);
 			tlsTools.activateCurrentServerSecurityParameters();
 			switch (handshakeState) {
@@ -112,7 +112,7 @@ public class TLS {
 			case Constants.STATE_HANDSHAKE_CHANGE_CIPHER_SPEC:
 				tlsTools.serverHashActive = false;
 				incomingRecordDataLength = unwrapRecordData(incomingRecordData, incomingRecordDataOffset, incomingRecordDataLength);
-				RecordTools.parseChangeCipherSpec(incomingRecordData, incomingRecordDataOffset, incomingRecordDataLength);
+				recordTools.parseChangeCipherSpec(incomingRecordData, incomingRecordDataOffset, incomingRecordDataLength);
 				tlsTools.makeNextSecurityParametersCurrentForServer();
 				handshakeState = Constants.STATE_HANDSHAKE_FINISHED;
 				break;
@@ -125,12 +125,13 @@ public class TLS {
 				} else {
 					handshakeState = Constants.STATE_HANDSHAKE_HELLO;
 					transmissionState = Constants.STATE_TRANSMISSION_SEND;
-					tlsState = Constants.STATE_APPLET_APPLICATION_DATA;	
+					tlsState = Constants.STATE_TLS_APPLICATION_DATA;	
+					handshakeCounter++;
 				}
 				break;
 			}		
 		}
-		if (transmissionState == Constants.STATE_TRANSMISSION_SEND && tlsState == Constants.STATE_APPLET_HANDSHAKE){
+		if (transmissionState == Constants.STATE_TRANSMISSION_SEND && tlsState == Constants.STATE_TLS_HANDSHAKE){
 			tlsTools.activateCurrentClientSecurityParameters();
 			switch (handshakeState) {
 			case Constants.STATE_HANDSHAKE_HELLO:
@@ -163,7 +164,8 @@ public class TLS {
 				if (abbreviatedHandshake){
 					handshakeState = Constants.STATE_HANDSHAKE_HELLO;
 					transmissionState = Constants.STATE_TRANSMISSION_SEND;
-					tlsState = Constants.STATE_APPLET_APPLICATION_DATA;
+					tlsState = Constants.STATE_TLS_APPLICATION_DATA;
+					handshakeCounter++;
 				} else {
 					handshakeState = Constants.STATE_HANDSHAKE_CHANGE_CIPHER_SPEC;
 					transmissionState = Constants.STATE_TRANSMISSION_RECEIVE;
@@ -344,6 +346,6 @@ public class TLS {
 	}
 	
 	private boolean checkIfAnotherMessageIsNeeded() {
-		return tlsState != Constants.STATE_APPLET_APPLICATION_DATA;
+		return tlsState != Constants.STATE_TLS_APPLICATION_DATA;
 	}
 }

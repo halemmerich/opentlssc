@@ -27,9 +27,6 @@ public class Constants{
 	
 	// TLS constants
 	static final byte	TLS_COMPRESSION_METHOD_NULL							= 0;
-	static final byte	TLS_MAC_ALGORITHM_NULL								= 0;
-	static final byte	TLS_MAC_ALGORITHM_HMAC_SHA_1						= 0;
-	static final byte	TLS_MAC_ALGORITHM_HMAC_SHA_256						= 0;
 	public static final byte	TLS_HANDSHAKE_CONTENT_TYPE_HELLO_REQUEST			= 0;
 	public static final byte	TLS_HANDSHAKE_CONTENT_TYPE_CLIENT_HELLO				= 1;
 	public static final byte	TLS_HANDSHAKE_CONTENT_TYPE_SERVER_HELLO				= 2;
@@ -66,18 +63,17 @@ public class Constants{
 
 	// Applet states
 
-	static final byte	STATE_APPLET_UNINITIALIZED							= 0;
-	static final byte	STATE_APPLET_HANDSHAKE								= 60;
+	static final byte	STATE_TLS_HANDSHAKE								= 60;
 	static final byte	STATE_HANDSHAKE_HELLO								= 1;
 	static final byte	STATE_HANDSHAKE_FINISHED							= 40;
 	static final byte	STATE_HANDSHAKE_CHANGE_CIPHER_SPEC					= 41;
 	static final byte	STATE_HANDSHAKE_CERTIFICATE							= 6;
 	static final byte	STATE_HANDSHAKE_HELLO_DONE							= 7;
 	static final byte	STATE_HANDSHAKE_KEY_EXCHANGE						= 8;
-	static final byte	STATE_APPLET_APPLICATION_DATA						= 50;
-	static final byte	STATE_APPLET_CLOSE_CONNECTION						= (byte) 255;
-	static final byte	STATE_APPLET_ERROR									= 100;
-	static final byte	STATE_APPLET_CONNECTION_CLOSED								= 101;
+	static final byte	STATE_TLS_APPLICATION_DATA						= 50;
+	static final byte	STATE_TLS_CLOSE_CONNECTION						= (byte) 255;
+	static final byte	STATE_TLS_ERROR									= 100;
+	static final byte	STATE_TLS_CONNECTION_CLOSED								= 101;
 	static final byte	STATE_TRANSMISSION_NONE								= 0;
 	static final byte	STATE_TRANSMISSION_SEND								= 1;
 	static final byte	STATE_TRANSMISSION_RECEIVE							= 2;

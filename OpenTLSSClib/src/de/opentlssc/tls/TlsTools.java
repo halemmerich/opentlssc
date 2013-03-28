@@ -177,7 +177,7 @@ class TlsTools {
 		byte[] dest = tls.getTransientTools().getWorkspace(identifier, false);
 		digestForFinishedClient.doFinal(dest, (short) 0, (short) 0, dest,
 				Constants.ZERO);
-		computeVerifyData(state, dest, Constants.ZERO);
+		computeVerifyData(state, dest, Constants.ZERO, Constants.labelClientFinished);
 		tls.getTransientTools().freeWorkspace(dest);
 	}
 
@@ -185,7 +185,7 @@ class TlsTools {
 		byte[] dest = tls.getTransientTools().getWorkspace(identifier, false);
 		digestForFinishedServer.doFinal(dest, (short) 0, (short) 0, dest,
 				Constants.ZERO);
-		computeVerifyData(state, dest, Constants.ZERO);
+		computeVerifyData(state, dest, Constants.ZERO, Constants.labelServerFinished);
 		tls.getTransientTools().freeWorkspace(dest);
 	}
 
@@ -395,9 +395,8 @@ class TlsTools {
 	}
 
 	void computeVerifyData(TlsSecurityParameters state,
-			byte[] handshakeHash, short offset) {
-		prf.expand(state.verifyData, state.masterSecret,
-				Constants.labelClientFinished, handshakeHash, offset,
+			byte[] handshakeHash, short offset, ArrayPointer label) {
+		prf.expand(state.verifyData, state.masterSecret, label, handshakeHash, offset,
 				digestForFinishedClient.getLength(), Constants.LENGTH_VERIFY_DATA);
 	}
 

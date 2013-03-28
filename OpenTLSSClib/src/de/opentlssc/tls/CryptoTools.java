@@ -39,6 +39,7 @@ class CryptoTools{
 			random = RandomData.getInstance(RandomData.ALG_SECURE_RANDOM);
 		}
 		this.tls = tls;
+		randomNumberWorkspace = new byte [2];
 	}
 	
 	/**

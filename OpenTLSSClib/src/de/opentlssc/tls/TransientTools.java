@@ -27,8 +27,8 @@ import javacard.framework.Util;
  *
  */
 class TransientTools {
-	private static ByteArray [] workspaces;
-	private static ByteArray [] bigWorkspaces;
+	private ByteArray [] workspaces;
+	private ByteArray [] bigWorkspaces;
 	
 	TransientTools(){
 		bigWorkspaces = new ByteArray [LibraryConfiguration.CONFIG_BIG_WORKSPACES];

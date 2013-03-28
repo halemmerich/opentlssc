@@ -42,7 +42,7 @@ class RecordTools{
 	private void checkFinishedValue(byte[] buffer, short offset) {
 		ArrayPointer currentVerifyData = tls.getTlsTools().getCurrentClientSecurityParameters().verifyData;
 		if (0 != Util.arrayCompare(buffer, Constants.OFFSET_TLS_FINISHED_IN_RECORD, currentVerifyData.data, currentVerifyData.offset, currentVerifyData.length)){
-		//FIXME	ISOException.throwIt(ISO7816.SW_DATA_INVALID);
+			ISOException.throwIt(ISO7816.SW_DATA_INVALID);
 		}
 	}
 
@@ -51,10 +51,11 @@ class RecordTools{
 		tls.getTlsTools().handshakeHashUpdate(buffer, (short) (offset + Constants.LENGTH_TLS_RECORD_HEADER), (short) (length - Constants.LENGTH_TLS_RECORD_HEADER));
 	}
 
-	static void parseChangeCipherSpec(byte[] buffer, short offset, short length) {
+	void parseChangeCipherSpec(byte[] buffer, short offset, short length) {
 		if (buffer[offset + Constants.LENGTH_TLS_RECORD_HEADER] != 1){
 			ISOException.throwIt(ISO7816.SW_DATA_INVALID);
 		}
+		tls.getTlsTools().handshakeHashFinishServer(tls.getTlsTools().getCurrentClientSecurityParameters());
 	}
 	
 	void parseServerHello(byte[] buffer, short offset, short length){
@@ -217,7 +218,7 @@ class RecordTools{
 	
 	static void writeRecordHeaderLength(short recordContentLength, byte [] recordData, short recordDataOffset){
 		recordDataOffset += Constants.OFFSET_TLS_RECORD_LENGTH;
-		recordDataOffset = Util.setShort(recordData, recordDataOffset, recordContentLength);
+		Util.setShort(recordData, recordDataOffset, recordContentLength);
 	}
 
 	static short writeHandshakeHeader(byte handshakeType, byte [] recordData, short recordDataOffset){
@@ -228,7 +229,7 @@ class RecordTools{
 	
 	static void writeHandshakeHeaderLength(short handshakeContentLength, byte [] recordData, short recordDataOffset){
 		recordDataOffset += Constants.LENGTH_TLS_RECORD_HEADER + Constants.OFFSET_TLS_HANDSHAKE_LENGTH_IN_RECORD_CONTENT + 1;
-		recordDataOffset = Util.setShort(recordData, recordDataOffset, handshakeContentLength);
+		Util.setShort(recordData, recordDataOffset, handshakeContentLength);
 	}
 
 	static void checkRecord(byte [] recordData, short recordDataOffset, short recordDataLength){
