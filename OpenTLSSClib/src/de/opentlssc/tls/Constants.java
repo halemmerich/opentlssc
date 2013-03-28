@@ -60,7 +60,27 @@ public class Constants{
 	static final byte	TLS_ALERT_REASON_HANDSHAKE_FAILURE					= 40;
 	static final byte	TLS_ALERT_REASON_PROTOCOLL_VERSION					= 70;
 	static final byte	TLS_ALERT_REASON_INTERNAL_ERROR						= 80;
-
+	static final byte	TLS_ALERT_REASON_DECRYPTION_FAILED_RESERVER			= 21;
+	static final byte	TLS_ALERT_REASON_RECORD_OVERFLOW					= 22;
+	static final byte	TLS_ALERT_REASON_DECOMPRESSION_FAILURE				= 30;
+	static final byte	TLS_ALERT_REASON_NO_CERTIFICATE_RESERVED			= 41;
+	static final byte	TLS_ALERT_REASON_BAD_CERTIFICATE					= 42;
+	static final byte	TLS_ALERT_REASON_UNSUPPORTED_CERTIFICATE			= 43;
+	static final byte	TLS_ALERT_REASON_CERTIFICATE_REVOKED				= 44;
+	static final byte	TLS_ALERT_REASON_EXPIRED							= 45;
+	static final byte	TLS_ALERT_REASON_UNKNOWN							= 46;
+	static final byte	TLS_ALERT_REASON_ILLEGAL_PARAMETER					= 47;
+	static final byte	TLS_ALERT_REASON_UNKNOWN_CA							= 48;
+	static final byte	TLS_ALERT_REASON_ACCESS_DENIED						= 49;
+	static final byte	TLS_ALERT_REASON_DECODE_ERROR						= 50;
+	static final byte	TLS_ALERT_REASON_DECRYPT_ERROR						= 51;
+	static final byte	TLS_ALERT_REASON_EXPORT_RESTRICTION_RESERVED		= 60;
+	static final byte	TLS_ALERT_REASON_INSUFFICIENT_SECURITY				= 71;
+	static final byte	TLS_ALERT_REASON_USER_CANCELED						= 90;
+	static final byte	TLS_ALERT_REASON_NO_RENEGOTIATION					= 100;
+	static final byte	TLS_ALERT_REASON_UNSUPPORTED_EXTENSION				= 110;
+	
+	
 	// Applet states
 
 	static final byte	STATE_TLS_HANDSHAKE								= 60;

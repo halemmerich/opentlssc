@@ -50,4 +50,9 @@ class Utilities {
 		}
 		return (short) (destOff + length);
 	}
+
+	public static short buildAlert(boolean fatal, byte alertReason) {
+		short alert = (short) ((fatal ? Constants.TLS_ALERT_LEVEL_FATAL: Constants.TLS_ALERT_LEVEL_WARNING) << 8);
+		return (short) (alert | alertReason);
+	}
 }

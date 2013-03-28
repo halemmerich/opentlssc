@@ -17,8 +17,7 @@
 
 package de.opentlssc.tls;
 
-import javacard.framework.ISO7816;
-import javacard.framework.ISOException;
+import javacard.framework.CardRuntimeException;
 import javacard.framework.Util;
 
 class RecordTools{
@@ -42,7 +41,8 @@ class RecordTools{
 	private void checkFinishedValue(byte[] buffer, short offset) {
 		ArrayPointer currentVerifyData = tls.getTlsTools().getCurrentClientSecurityParameters().verifyData;
 		if (0 != Util.arrayCompare(buffer, Constants.OFFSET_TLS_FINISHED_IN_RECORD, currentVerifyData.data, currentVerifyData.offset, currentVerifyData.length)){
-			ISOException.throwIt(ISO7816.SW_DATA_INVALID);
+			tls.getTlsTools().getCurrentClientSecurityParameters().alert = Utilities.buildAlert(true, Constants.TLS_ALERT_REASON_DECODE_ERROR);
+			CardRuntimeException.throwIt((short) 0);
 		}
 	}
 
@@ -53,7 +53,8 @@ class RecordTools{
 
 	void parseChangeCipherSpec(byte[] buffer, short offset, short length) {
 		if (buffer[offset + Constants.LENGTH_TLS_RECORD_HEADER] != 1){
-			ISOException.throwIt(ISO7816.SW_DATA_INVALID);
+			tls.getTlsTools().getCurrentClientSecurityParameters().alert = Utilities.buildAlert(true, Constants.TLS_ALERT_REASON_UNEXPECTED_MESSAGE);
+			CardRuntimeException.throwIt((short) 0);
 		}
 		tls.getTlsTools().handshakeHashFinishServer(tls.getTlsTools().getCurrentClientSecurityParameters());
 	}
@@ -88,9 +89,9 @@ class RecordTools{
 		Util.arrayCopyNonAtomic(recordData, (short) (recordDataOffset + Constants.LENGTH_TLS_RECORD_HEADER), destination, destinationOffset, (short) (recordDataLength + Constants.LENGTH_TLS_RECORD_HEADER));
 	}
 	
-	short writeAlert(byte [] recordData, short recordDataOffset) {
+	static short writeAlert(byte [] recordData, short recordDataOffset, short alert) {
 		recordDataOffset = writeRecordHeader(Constants.TLS_RECORD_CONTENT_TYPE_HANDSHAKE_VALUE, recordData, recordDataOffset);
-		recordDataOffset = Util.setShort(recordData, recordDataOffset, tls.getTlsTools().getCurrentClientSecurityParameters().alert);
+		recordDataOffset = Util.setShort(recordData, recordDataOffset, alert);
 		writeRecordHeaderLength((short) 2, recordData, recordDataOffset);
 		return recordDataOffset;
 	}
@@ -232,15 +233,17 @@ class RecordTools{
 		Util.setShort(recordData, recordDataOffset, handshakeContentLength);
 	}
 
-	static void checkRecord(byte [] recordData, short recordDataOffset, short recordDataLength){
+	void checkRecord(byte [] recordData, short recordDataOffset, short recordDataLength){
 		if (Util.getShort(recordData, (short) (recordDataOffset + Constants.OFFSET_TLS_RECORD_LENGTH)) != recordDataLength - Constants.LENGTH_TLS_RECORD_HEADER){
-			ISOException.throwIt(ISO7816.SW_DATA_INVALID);
+			tls.getTlsTools().getCurrentClientSecurityParameters().alert = Utilities.buildAlert(true, Constants.TLS_ALERT_REASON_RECORD_OVERFLOW);
+			CardRuntimeException.throwIt((short) 0);
 		}
 	}
 
-	static void checkHandshake(byte [] recordData, short recordDataOffset, short recordDataLength){
+	void checkHandshake(byte [] recordData, short recordDataOffset, short recordDataLength){
 		if (Util.getShort(recordData, (short) (recordDataOffset + Constants.LENGTH_TLS_RECORD_HEADER + Constants.OFFSET_TLS_HANDSHAKE_LENGTH_IN_RECORD_CONTENT + 1)) != recordDataLength - Constants.LENGTH_TLS_RECORD_HEADER - Constants.LENGTH_TLS_HANDSHAKE_HEADER){
-			ISOException.throwIt(ISO7816.SW_DATA_INVALID);
+			tls.getTlsTools().getCurrentClientSecurityParameters().alert = Utilities.buildAlert(true, Constants.TLS_ALERT_REASON_UNEXPECTED_MESSAGE);
+			CardRuntimeException.throwIt((short) 0);
 		}
 	}
 }
