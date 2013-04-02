@@ -100,6 +100,7 @@ public class Constants{
 
 	static final short	LENGTH_TLS_RECORD_HEADER							= 5;
 	static final short	LENGTH_TLS_HANDSHAKE_HEADER							= 4;
+	static final short	LENGTH_TLS_SEND_SEQUENCE_COUNTER					= 8;
 	static final short	LENGTH_RANDOM_BYTES									= 32;
 	static final short	LENGTH_EXTENSIONS_LENGTH							= 2;
 	static final short	LENGTH_CIPHER_SUITES_LENGTH							= 2;
@@ -151,6 +152,9 @@ public class Constants{
 
 	static final short	TLS_VERSION											= 0x0303;
 
+	static final byte TLS_CONNECTION_DIRECTION_CLIENT_TO_SERVER				= 1;
+	static final byte TLS_CONNECTION_DIRECTION_SERVER_TO_CLIENT				= 2;
+
 	static final short	OFFSET_TLS_CERTIFICATE_LENGTH_IN_RECORD				= LENGTH_TLS_RECORD_HEADER + LENGTH_TLS_HANDSHAKE_HEADER + 3;
 	static final short	OFFSET_TLS_CERTIFICATE_DATA_IN_RECORD				= OFFSET_TLS_CERTIFICATE_LENGTH_IN_RECORD + 3;
 	static final short	OFFSET_TLS_FINISHED_IN_RECORD						= LENGTH_TLS_RECORD_HEADER + LENGTH_TLS_HANDSHAKE_HEADER;
@@ -190,5 +194,4 @@ public class Constants{
 		labelKeyExpansion = new ArrayPointer(Constants.LABELS, Constants.OFFSET_LABEL_KEY_EXPANSION, Constants.LENGTH_LABEL_KEY_EXPANSION);
 
 	}
-
 }

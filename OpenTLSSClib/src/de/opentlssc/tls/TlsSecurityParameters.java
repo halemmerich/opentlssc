@@ -36,8 +36,8 @@ class TlsSecurityParameters {
 	ArrayPointer	sessionId;
 	ArrayPointer	verifyData;
 
-	PrimitiveShort	clientSequenceNumber;
-	PrimitiveShort	serverSequenceNumber;
+	private short	clientSequenceNumber;
+	private short	serverSequenceNumber;
 
 	private byte[]	data;
 
@@ -67,8 +67,8 @@ class TlsSecurityParameters {
 		offset += Constants.LENGTH_VERIFY_DATA;
 
 		keyBlock = new ArrayPointer(data, offset, LibraryConfiguration.CONFIG_KEYBLOCK_MAX_SIZE);
-		clientSequenceNumber = new PrimitiveShort((short) 0, (short) 8);
-		serverSequenceNumber = new PrimitiveShort((short) 0, (short) 8);
+		clientSequenceNumber = 0;
+		serverSequenceNumber = 0;
 		clientMacWriteKey = new ArrayPointer(keyBlock.data, keyBlock.offset, Constants.ZERO);
 		serverMacWriteKey = new ArrayPointer(keyBlock.data, keyBlock.offset, Constants.ZERO);
 		clientWriteKey = new ArrayPointer(keyBlock.data, keyBlock.offset, Constants.ZERO);
@@ -84,12 +84,36 @@ class TlsSecurityParameters {
 		clientWriteKey.length = 0;
 		serverWriteKey.length = 0;
 
-		clientSequenceNumber.value = 0;
-		serverSequenceNumber.value = 0;
+		clientSequenceNumber = 0;
+		serverSequenceNumber = 0;
 		
 		sessionId.length = 0;
 	}
 
+	short getClientSequenceNumber(){
+		return clientSequenceNumber;
+	}
+
+	short getServerSequenceNumber(){
+		return serverSequenceNumber;
+	}
+	
+	void incrementServerSequenceNumber(){
+		serverSequenceNumber++;
+	}
+	
+	void incrementClientSequenceNumber(){
+		clientSequenceNumber++;
+	}
+	
+	void resetServerSequenceNumber(){
+		serverSequenceNumber = 0;
+	}
+	
+	void resetClientSequenceNumber(){
+		clientSequenceNumber = 0;
+	}
+	
 	/**
 	 * set ciphersuite first
 	 */

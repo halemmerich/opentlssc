@@ -33,7 +33,6 @@ class TlsTools {
 	Crypto_HMAC payloadMac; // hmac
 	Cipher payloadCipher; // bulk
 	Key payloadKey;
-	PrimitiveShort sendSequenceCounter;
 	ArrayPointer keyMac;
 	RSAPublicKey serverPublicKey; // key
 	Crypto_Prf prf;
@@ -41,6 +40,8 @@ class TlsTools {
 	private TlsSecurityParameters[] securityParameters;
 	private byte currentClientSecurityParametersPointer = 0;
 	private byte currentServerSecurityParametersPointer = 0;
+	
+	private byte currentConnectionDirection = Constants.TLS_CONNECTION_DIRECTION_CLIENT_TO_SERVER;
 
 	// statefull cipher objects for payload protection
 	private Cipher cipherAes;
@@ -226,11 +227,11 @@ class TlsTools {
 	 */
 	void makeNextSecurityParametersCurrentForServer() {
 		currentServerSecurityParametersPointer = (byte) ((currentServerSecurityParametersPointer + 1) % securityParameters.length);
-		securityParameters[currentServerSecurityParametersPointer].serverSequenceNumber.value = 0;
+		securityParameters[currentServerSecurityParametersPointer].resetServerSequenceNumber();
 	}
 	void makeNextSecurityParametersCurrentForClient() {
 		currentClientSecurityParametersPointer = (byte) ((currentClientSecurityParametersPointer + 1) % securityParameters.length);
-		securityParameters[currentClientSecurityParametersPointer].clientSequenceNumber.value = 0;
+		securityParameters[currentClientSecurityParametersPointer].resetClientSequenceNumber();
 	}
 	
 	private void setCryptoObjects(short cipherSuite){
@@ -305,7 +306,8 @@ class TlsTools {
 			}
 		}
 
-		sendSequenceCounter = state.clientSequenceNumber;
+		currentConnectionDirection = Constants.TLS_CONNECTION_DIRECTION_CLIENT_TO_SERVER;
+		
 		if (state.cipherSuite != Constants.TLS_CIPHER_SUITE_NULL_WITH_NULL_NULL){
 			keyMac = state.clientMacWriteKey;	
 		} else {
@@ -329,7 +331,8 @@ class TlsTools {
 			}
 		}
 
-		sendSequenceCounter = state.serverSequenceNumber;
+		currentConnectionDirection = Constants.TLS_CONNECTION_DIRECTION_SERVER_TO_CLIENT;
+		
 		if (state.cipherSuite != Constants.TLS_CIPHER_SUITE_NULL_WITH_NULL_NULL){
 			keyMac = state.serverMacWriteKey;	
 		} else {
@@ -360,6 +363,10 @@ class TlsTools {
 
 	TlsSecurityParameters getCurrentClientSecurityParameters() {
 		return securityParameters[currentClientSecurityParametersPointer];
+	}
+
+	TlsSecurityParameters getCurrentServerSecurityParameters() {
+		return securityParameters[currentServerSecurityParametersPointer];
 	}
 
 	void generateKeyBlock(TlsSecurityParameters state) {
@@ -419,6 +426,25 @@ class TlsTools {
 				return serverPublicKey2048;
 			default:
 				return null;
+		}
+	}
+
+	public short getCurrentSendSequenceCounter() {
+		switch (currentConnectionDirection){
+		case Constants.TLS_CONNECTION_DIRECTION_CLIENT_TO_SERVER:
+			return securityParameters[currentClientSecurityParametersPointer].getClientSequenceNumber();
+		case Constants.TLS_CONNECTION_DIRECTION_SERVER_TO_CLIENT:
+			return securityParameters[currentServerSecurityParametersPointer].getServerSequenceNumber();
+		}
+		return -1;
+	}
+	
+	void incrementCurrentSendSequenceCounter(){
+		switch (currentConnectionDirection){
+		case Constants.TLS_CONNECTION_DIRECTION_CLIENT_TO_SERVER:
+			securityParameters[currentClientSecurityParametersPointer].incrementClientSequenceNumber();
+		case Constants.TLS_CONNECTION_DIRECTION_SERVER_TO_CLIENT:
+			securityParameters[currentServerSecurityParametersPointer].incrementServerSequenceNumber();
 		}
 	}
 }

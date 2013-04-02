@@ -191,8 +191,7 @@ public class TLS {
 	private void createMacHeader(byte typeByte, short contentLength){
 		byte [] workspace = transientTools.getWorkspace(this, false);
 		
-		tlsTools.sendSequenceCounter.copy(workspace, (short) 0);
-		
+		Utilities.setShort(workspace, (short)0, Constants.LENGTH_TLS_SEND_SEQUENCE_COUNTER, tlsTools.getCurrentSendSequenceCounter());
 		
 		workspace[8] = typeByte;
 		Util.setShort(workspace, (short) 9, Constants.TLS_VERSION);
@@ -243,7 +242,7 @@ public class TLS {
 		outgoingRecordDataLength = doMac(outgoingRecordData, outgoingRecordDataOffset, outgoingRecordDataLength);
 		outgoingRecordDataLength = encryptRecordPayload(outgoingRecordData, outgoingRecordDataOffset, outgoingRecordDataLength);
 		resetRecordHeaderLength(outgoingRecordData, outgoingRecordDataOffset, (short) (outgoingRecordDataLength - Constants.LENGTH_TLS_RECORD_HEADER));
-		tlsTools.sendSequenceCounter.value++;
+		tlsTools.getCurrentClientSecurityParameters().incrementClientSequenceNumber();
 		return outgoingRecordDataLength;
 	}
 
@@ -252,7 +251,7 @@ public class TLS {
 		incomingRecordDataLength = decryptRecordPayload(incomingRecordData, incomingRecordDataOffset, incomingRecordDataLength);
 		incomingRecordDataLength = checkMac(incomingRecordData, incomingRecordDataOffset, incomingRecordDataLength);
 		resetRecordHeaderLength(incomingRecordData, incomingRecordDataOffset, (short) (incomingRecordDataLength - Constants.LENGTH_TLS_RECORD_HEADER));
-		tlsTools.sendSequenceCounter.value++;
+		tlsTools.getCurrentServerSecurityParameters().incrementServerSequenceNumber();
 		return incomingRecordDataLength;
 	}
 
