@@ -74,6 +74,8 @@ public class ExampleApplet extends Applet implements ExtendedLength {
 	private static final byte STATE_RECEIVE_APP_DATA_RECORD = 3;
 	private static final byte STATE_REINIT_TLS = 4;
 	private static final byte STATE_ABBREVIATED_HANDSHAKE = 5;
+	private static final byte STATE_CLOSE_CONNECTION = 6;
+	private static final byte STATE_FINISHED = 7;
 	
 	public void process(APDU apdu) throws ISOException {
 		byte [] buffer = apdu.getBuffer();
@@ -84,6 +86,7 @@ public class ExampleApplet extends Applet implements ExtendedLength {
 	}
 	
 	private byte state = 0;
+	private int applicationDataCounter = 0;
 	
 	private void doTLS(APDU apdu){
 		short incomingLength = receiveExtended(apdu, workspace, (short) 0);
@@ -92,6 +95,7 @@ public class ExampleApplet extends Applet implements ExtendedLength {
 		switch (state){
 		case STATE_INIT_TLS:
 			tls.initializeTls();
+			applicationDataCounter = 0;
 			state = STATE_FULL_HANDSHAKE;
 			break;
 		case STATE_FULL_HANDSHAKE:
@@ -104,13 +108,18 @@ public class ExampleApplet extends Applet implements ExtendedLength {
 		case STATE_SEND_APP_DATA_RECORD:
 			Util.arrayFillNonAtomic(workspace, (short)0, (short) workspace.length, (byte) 0);
 			responseApduDataLength = tls.writeRecord(appData, (short) 0, (short) appData.length, workspace, (short) 0);
+			applicationDataCounter++;
 			state = STATE_RECEIVE_APP_DATA_RECORD;
 			break;
 		case STATE_RECEIVE_APP_DATA_RECORD:
 			if (incomingLength > apdu.getOffsetCdata()){
 				tls.readRecord(workspace, (short) 0, incomingLength, workspace, (short) 0);
 			}
-			state = STATE_REINIT_TLS;
+			if (applicationDataCounter == 3) {
+				state = STATE_CLOSE_CONNECTION;
+			} else {
+				state = STATE_REINIT_TLS;
+			}
 			break;
 		case STATE_REINIT_TLS:
 			tls.initHandshake();
@@ -122,6 +131,13 @@ public class ExampleApplet extends Applet implements ExtendedLength {
 			} else {
 				state = STATE_SEND_APP_DATA_RECORD;
 			}
+			break;
+		case STATE_CLOSE_CONNECTION:
+			responseApduDataLength = tls.closeConnection(workspace, (short) 0);
+			state = STATE_FINISHED;
+			break;
+		case STATE_FINISHED:
+			ISOException.throwIt(ISO7816.SW_COMMAND_NOT_ALLOWED);
 			break;
 		}
 		
