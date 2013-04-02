@@ -19,32 +19,27 @@ along with the OpenTLSSC.  If not, see <http://www.gnu.org/licenses/>.
 -->
 <project name="Card">
 	<import file="javacardbuild.xml"/>
-
-	<path id="gpj-classpath">
-		<pathelement location="${env.gpj2010}/gpj.jar" />
-		<pathelement location="${env.gpj2010}/bcprov-jdk16-143.jar" />
-	</path>
 	
 	<target name="cardInstall" description="Install the applet to the card">
+		<echo>Calling GPJ with parameter "-load ${code.capfile} -install -priv ${code.cardprivilege}"</echo>
 		<java jar="${env.gpj2012}/gpj.jar" fork="true">
 			<arg line="-load ${code.capfile}" />
 			<arg line="-install" />
 			<arg line="-priv ${code.cardprivilege}" />
 		</java>
 	</target>
-
+	
 	<target name="cardDelete" description="Delete package/applet from the card">
-		<java jar="${env.gpj2010}/gpj.jar" fork="true">
+		<echo>Calling GPJ with parameter "-deletedeps -delete ${code.package.aid.gp}"</echo>
+		<java jar="${env.gpj2012}/gpj.jar" fork="true">
 			<arg line="-deletedeps" />
 			<arg line="-delete ${code.package.aid.gp}" />
-			<classpath refid="gpj-classpath" />
 		</java>
 	</target>
 
 	<target name="cardList" description="List the card contents">
-		<java jar="${env.gpj2010}/gpj.jar" fork="true">
+		<java jar="${env.gpj2012}/gpj.jar" fork="true">
 			<arg line="-list" />
-			<classpath refid="gpj-classpath" />
 		</java>
 	</target>
 </project>
