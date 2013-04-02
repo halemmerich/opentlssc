@@ -131,12 +131,10 @@ class ASN1Tools{
 		// if not short form
 		short length = 0;
 		if (numberOfLengthOctets > 1) {
-			length = (short) ((data[(short) (offset)] & 0x7F) + 1);
-			for (short i = 1; i < numberOfLengthOctets; i++) {
-				length |= data[(short) (offset + i)] & 0xFF;
-				if (i < (short) (numberOfLengthOctets - 1)) {
-					length <<= 8;
-				}
+			length = (short) ((data[(short) (offset + 1)] & 0xFF));
+			for (short i = (short) (offset + 2); i < numberOfLengthOctets + offset; i++){
+				length <<= 8;
+				length |= data [i] & 0xFF;
 			}
 		} else {
 			length = data[offset];
