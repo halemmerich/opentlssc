@@ -90,8 +90,8 @@ class RecordTools{
 	}
 	
 	static short writeAlert(byte [] recordData, short recordDataOffset, short alert) {
-		recordDataOffset = writeRecordHeader(Constants.TLS_RECORD_CONTENT_TYPE_HANDSHAKE_VALUE, recordData, recordDataOffset);
-		recordDataOffset = Util.setShort(recordData, recordDataOffset, alert);
+		recordDataOffset = writeRecordHeader(Constants.TLS_RECORD_CONTENT_TYPE_ALERT_VALUE, recordData, recordDataOffset);
+		recordDataOffset = Util.setShort(recordData, recordDataOffset, Utilities.buildAlert(false, Constants.TLS_ALERT_REASON_CLOSE_NOTIFY));
 		writeRecordHeaderLength((short) 2, recordData, recordDataOffset);
 		return recordDataOffset;
 	}
